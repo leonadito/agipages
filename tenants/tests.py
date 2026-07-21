@@ -2,6 +2,7 @@ from django.test import RequestFactory, TestCase
 
 from .middleware import TenantResolutionMiddleware
 from .models import Tenant
+from .traefik import build_traefik_dynamic_config
 
 
 class TenantResolutionMiddlewareTests(TestCase):
@@ -39,3 +40,32 @@ class TenantResolutionMiddlewareTests(TestCase):
         self.middleware(request)
         self.assertIsNone(request.tenant)
         self.assertFalse(hasattr(request, "urlconf"))
+
+
+class TraefikDynamicConfigTests(TestCase):
+    def test_verified_tenant_gets_http_and_https_routers(self):
+        Tenant.objects.create(
+            name="Diamond Towers",
+            slug="diamond-towers",
+            custom_domain="diamondtowers.com.br",
+            domain_verified=True,
+        )
+        config = build_traefik_dynamic_config()
+        routers = config["http"]["routers"]
+        self.assertIn("tenant-diamond-towers-websecure", routers)
+        self.assertIn("tenant-diamond-towers-web", routers)
+        websecure = routers["tenant-diamond-towers-websecure"]
+        self.assertEqual(websecure["rule"], "Host(`diamondtowers.com.br`)")
+        self.assertEqual(websecure["service"], "web")
+        self.assertEqual(websecure["tls"]["certResolver"], "letsencrypt")
+
+    def test_unverified_or_domainless_tenants_get_no_router(self):
+        Tenant.objects.create(name="No Domain", slug="no-domain")
+        Tenant.objects.create(
+            name="Unverified",
+            slug="unverified",
+            custom_domain="unverified.example.com",
+            domain_verified=False,
+        )
+        config = build_traefik_dynamic_config()
+        self.assertEqual(config["http"]["routers"], {})

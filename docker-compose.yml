@@ -1,0 +1,45 @@
+services:
+  web:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      DATABASE_PATH: /data/db.sqlite3
+    volumes:
+      - sqlite_data:/data
+      - media_data:/app/media
+    networks:
+      - traefik
+    restart: unless-stopped
+    # No ports published on the host — only reachable through Traefik,
+    # via the shared `traefik` network (Docker's embedded DNS resolves
+    # the "web" hostname used in traefik/dynamic/*.yml).
+
+  traefik:
+    image: traefik:v3.3
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik_acme:/letsencrypt
+    networks:
+      - traefik
+    restart: unless-stopped
+    depends_on:
+      - web
+
+networks:
+  traefik:
+    name: traefik
+
+volumes:
+  # SQLite file and uploaded media both need to survive rebuilds/
+  # redeploys — the container filesystem itself is ephemeral (PRD §9/§10).
+  sqlite_data:
+  media_data:
+  traefik_acme:

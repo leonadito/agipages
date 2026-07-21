@@ -2,45 +2,72 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Current state of this repository
+## What this system is
 
-**There is no application code here yet.** This directory currently contains only planning/reference material:
+A multi-tenant SaaS where real-estate agents/agencies build lead-capture landing pages for property launches via a structured form (no code/designer needed), then manage received leads in a dashboard with real-time Telegram notifications. Full spec in `PRD.md` (Portuguese) — read it for anything not covered here. `landing-page-exemplo.png` is the visual reference the public template follows; `diamond-infinity-towers/` holds real sample content used to seed a demo tenant.
 
-- `PRD.md` — the full product spec (in Portuguese). This is the source of truth for scope, data model, and technical decisions. Read it before proposing or building anything.
-- `landing-page-exemplo.png` — a reference screenshot of the layout the public landing page template should follow (see PRD section 5, "Anatomia da landing page").
-- `diamond-infinity-towers/` — real content for the first landing page to be built with this system, used as sample data/assets, not code:
-  - `folder-infinity-OF.pdf`, `diamond-infinity-condicoes-pagamento.jpeg` — property/financing content for the "Condições financeiras" and "Requisitos" sections.
-  - `diamond-infinity-towers_imagens-empreendimento/` — gallery images for the "Galeria/carrossel" section.
-  - `albertokappel_criativo_*.png`, `kappel_exemplos-criativos/` — ad creatives (Facebook/Instagram style), useful as reference for hero imagery and tone, not for the app UI itself.
+The MVP (all 7 milestones below) is implemented. Commit history (`git log --oneline`) maps 1:1 to these milestones if you need the order things were built in.
 
-There is no `manage.py`, no `docker-compose.yml`, no package manifest, and no git repository initialized yet (`git init` has not been run). Do not assume a project skeleton exists — check before referencing paths like `manage.py` or app directories, since they don't exist yet.
+## Commands
 
-Since there's no code, there are no build/lint/test commands to run. When implementation starts, this section should be updated with the real commands (`python manage.py runserver`, `python manage.py test`, etc.).
+```bash
+# Activate the venv first (Python 3.12; created via `py -3.12 -m venv .venv`)
+source .venv/Scripts/activate        # git-bash/WSL
+# .venv\Scripts\Activate.ps1         # PowerShell
 
-## What this system is (from PRD.md)
+python manage.py runserver           # dev server, http://127.0.0.1:8000
+python manage.py test                # full suite
+python manage.py test leads          # single app
+python manage.py test leads.tests.LeadDashboardTests.test_filter_by_status  # single test
 
-A multi-tenant SaaS where real-estate agents/agencies build lead-capture landing pages for property launches via a structured form (no code/designer needed), then manage received leads in a dashboard with real-time Telegram notifications.
+python manage.py makemigrations && python manage.py migrate
+python manage.py createsuperuser
+python manage.py seed_diamond_tenant # demo tenant + published landing page from diamond-infinity-towers/ assets
+python manage.py generate_traefik_config  # force-regenerate traefik/dynamic/tenants.yml (also runs automatically via a Tenant post_save/post_delete signal)
 
-Key domain rules to keep in mind for any future implementation work (see `PRD.md` for full detail — section numbers below refer to it):
+# Tailwind (run from frontend/, or --prefix from repo root)
+npm --prefix frontend run build:css  # one-off build → static/css/tailwind.css
+npm --prefix frontend run watch:css  # rebuild on change during dev
+```
 
-- **Multi-tenancy isolation is the top security concern (§7.1, §8):** every `Lead`/`LandingPage` query must filter by the tenant from the authenticated session — never infer tenant from a URL segment. The public site's tenant slug in the URL is routing only, and must never be trusted by the admin dashboard.
-- **Custom domain is configured per-tenant, not per-landing-page (§7.3):** a single tenant-resolution middleware must handle both cases — resolving tenant from the `Host` header (custom domain) or from the first path segment (fallback `meusaas.com/<tenant-slug>/<page-slug>`). Publishing a landing page never depends on a domain being configured.
-- **Draft vs. Published:** a landing page is only publicly reachable (either URL form) once published.
-- **Tracking IDs (Facebook Pixel / Google Ads) are per-landing-page, not per-tenant/domain (§7.4)** — the same client may run different campaigns with different pixels across pages on the same domain.
-- **Telegram notification is synchronous with a short timeout and silent failure (§7.7, §9):** the lead must already be saved before the Telegram call; a notification failure must never block the success response to the visitor. No task queue in the MVP — only reconsider Celery/RQ if lead volume demands it.
-- **LGPD/consent is explicitly out of MVP scope but flagged as a pre-production blocker (§9)** — don't silently add compliance UI, but don't treat it as fully resolved either if asked about production readiness.
+`DJANGO_SETTINGS_MODULE` defaults to `config.settings.dev` (set in `manage.py`); production uses `config.settings.prod` (set explicitly by `docker-compose.yml`). Both read secrets/config from `.env` via `django-environ` — copy `.env.example` to `.env` for local dev (never commit `.env`; it's gitignored and holds real secrets like `TELEGRAM_BOT_TOKEN`).
 
-## Planned stack (PRD §10 — not yet implemented)
+There is no Docker available in this dev environment, so `docker build`/`docker-compose up` have not been run here — only validated by static review (YAML parses, Dockerfile read-through). Test that flow for real before relying on it in production.
 
-- **Backend:** Python/Django.
-- **Frontend:** Django Templates + HTMX (server-driven interactivity) + Alpine.js (light client-side state) + Tailwind CSS. No SPA/heavy JS framework.
-- **Database:** SQLite initially, on a persistent Docker volume (not container-ephemeral filesystem); migrate to Postgres only when concurrent-write/scale needs justify it.
-- **Media storage:** Docker volume/bind mount in dev; S3-compatible object storage in production.
-- **Infra:** Dockerized app behind a reverse proxy (Traefik or Caddy) doing automatic ACME/SSL issuance per verified tenant domain, driven by Docker provider/labels or dynamic config (no stack restart needed to add a domain).
-- **Notifications:** synchronous HTTP call to Telegram Bot API, short timeout, try/except swallow on failure.
+## Architecture
 
-## Data model (high level, PRD §11)
+Flat app layout at repo root (no `apps/` wrapper): `config/` (settings package + urls), `tenants/`, `accounts/`, `core/`, `landingpages/`, `leads/`, `telegram_integration/`. Templates live under one root `templates/` dir (not per-app), mirroring app names (`templates/landingpages/`, `templates/leads/`, etc.), plus `templates/public/` for the public site and `templates/registration/` for auth.
 
-`Tenant` (slug, custom_domain, domain_verified) → 1:N `User`, 1:N `LandingPage`. `LandingPage` (10 content sections + status + slug + pixel/ads IDs) → 1:N `Lead` (form data + UTM + status + timestamps) → 1:N `LeadStatusHistory`. `Tenant` → 1:1 `TelegramIntegration` (chat_id).
+### Multi-tenancy — the load-bearing design decision
 
-The landing page template has exactly 10 fixed sections (hero, faixa de destaque, galeria, condições financeiras, formulário de captura, vídeo institucional, requisitos, características do imóvel, orçamento/oportunidade, CTA final + rodapé) — see PRD §5 for the full field list per section. The MVP is a single template for real estate; no drag-and-drop builder, no multi-vertical templates.
+`accounts.User` is a custom user model (`AUTH_USER_MODEL`, email-based login, no `username` field) with a nullable FK to `tenants.Tenant`. **Every dashboard view must inherit `core.mixins.TenantDashboardMixin`**, which sets `self.tenant = request.user.tenant` in `dispatch()` and adds it to template context — dashboard code must filter every queryset by `self.tenant`, never by a bare ID or URL segment. This is the single most important invariant in the codebase (PRD §8): a `landingpages:edit` or `leads:detail` request for another tenant's object must 404, not leak data. See the tenant-isolation tests in `landingpages/tests.py`, `leads/tests.py` for the pattern (create two tenants, assert cross-tenant access 404s).
+
+The public site is the one place a URL segment IS allowed to resolve a tenant (`landingpages.views._resolve_public_tenant`) — because it's the routing mechanism for a page that's intentionally public. `tenants/middleware.py::TenantResolutionMiddleware` sets `request.tenant` from the `Host` header when it matches a verified `Tenant.custom_domain`, and additionally swaps `request.urlconf` to `config.urls_custom_domain` (which only defines the public-page route — no dashboard/admin/accounts reachable through a tenant's custom domain, a second structural layer of isolation on top of the view-level checks). When the host doesn't match any verified domain, `request.tenant` stays `None` and `landingpages.views.public_page` resolves the tenant from the `<tenant_slug>` path segment instead (the `meusaas.com/<tenant-slug>/<page-slug>/` fallback). Both URL forms hit the *same* view function for both GET (render) and POST (HTMX lead submission).
+
+### Landing pages (`landingpages/`)
+
+`LandingPage` is one wide model covering all 10 fixed template sections (hero, faixa de destaque, condições financeiras, formulário de captura, vídeo institucional, requisitos, características, orçamento, CTA final + rodapé — see PRD §5 for the exact field list per section), plus `LandingPageGalleryImage` (ordered, FK'd) and `LandingPageAuditLog` (who created/updated/published/unpublished, when — PRD §8 auditability). Slug is auto-generated from title and **locked forever once `published_at` is ever set** (`LandingPage.save()` enforces this by re-reading the DB row), so a published public URL never breaks even if the page is later unpublished and edited again. Publishing is blocked (see `landingpages/forms.py::get_publish_errors`) until a minimum set of fields + at least one gallery image exist.
+
+The create/edit form (`templates/landingpages/form.html`) is a single real Django form + an `inlineformset_factory` for gallery images, with Alpine.js doing purely client-side tab switching across the 10 sections (`x-show`, no server round-trip per tab) — there's no server-side wizard.
+
+### Public site + leads (`landingpages/views.py::public_page`, `leads/`)
+
+Draft pages 404 on both URL forms — only `status=LandingPage.PUBLISHED` is ever served. UTM params (+`gclid`/`fbclid`) are read from the query string on GET and re-emitted as hidden inputs in the lead form, so they travel with the HTMX POST without needing session storage. Facebook Pixel / Google Ads snippets are injected per-landing-page (not per-tenant), only when that page's IDs are set. The lead form POSTs to `request.path` (the same URL) via `hx-post`/`hx-target`, swapping in either `public/partials/lead_form_success.html` or a re-rendered `lead_form.html` with errors — no page reload. Anti-spam is a honeypot field (`leads/forms.py::LeadCaptureForm.clean_website`) plus `django-ratelimit` (`method="POST"` only, so GET traffic from ads is never rate-limited).
+
+`Lead` creation fires a `post_save` signal — but the receiver lives in `telegram_integration/signals.py`, not in `leads/`, connected via `telegram_integration/apps.py::ready()`. This keeps `leads` decoupled from the notification mechanism entirely.
+
+### Leads dashboard (`leads/`)
+
+`leads/filters.py::LeadFilter` (django-filter) is shared between the HTML list view and the CSV export (`leads/views.py::LeadExportCSVView`, streamed via `StreamingHttpResponse` + `csv.writer`) specifically so they can never drift out of sync. The `landing_page` filter's queryset is always restricted to the current tenant in `LeadFilter.__init__`, and the base queryset passed in is *also* pre-filtered by tenant — double protection against a crafted `?landing_page=<other tenant's id>`. Status changes are inline HTMX posts that also write a `LeadStatusHistory` row (who/when).
+
+### Telegram integration (`telegram_integration/`)
+
+Linking a tenant's Telegram chat requires an inbound webhook (Telegram never exposes a user's `chat_id` any other way) — `TelegramWebhookView` at `/telegram/webhook/<secret>/`, where `<secret>` is compared against `TELEGRAM_WEBHOOK_SECRET` since Telegram doesn't sign requests. The dashboard generates a short-lived `TelegramLinkCode` and shows a `t.me/<bot>?start=<code>` deep link; tapping it sends `/start <code>` to the bot, which the webhook exchanges for an activated `TelegramIntegration(chat_id=...)`. `telegram_integration/services.py::send_telegram_message` wraps the actual HTTP call in `try/except` with a short timeout — a Telegram failure must never surface to the visitor who just submitted the public lead form, since the `Lead` is already committed before this runs (PRD §7.7). This is proven directly in `telegram_integration/tests.py` by mocking `requests.post` to raise `Timeout` and asserting the `Lead` still gets created.
+
+Real end-to-end testing (actual bot + public webhook URL) needs a public HTTPS endpoint — Telegram's servers can't reach `127.0.0.1`. This wasn't exercised against production; do it against the real deployed domain (see Docker/Traefik below) rather than fighting with a tunnel tool locally.
+
+### Docker / Traefik / custom domains (untested locally — no Docker available in this dev environment)
+
+`Dockerfile` is a 2-stage build (Node stage compiles Tailwind → `static/css/tailwind.css`; Python stage runs `collectstatic` and serves via `gunicorn`). `docker-compose.yml` runs `web` (no published ports — reachable only via the `traefik` docker network) and `traefik`. Per-tenant custom domain routing uses Traefik's **file provider**, not Docker labels: `tenants/traefik.py::regenerate_traefik_config()` rewrites `traefik/dynamic/tenants.yml` (gitignored, generated) with one router per verified `Tenant.custom_domain`, all pointing at the same statically-defined `web` service (declared once in the tracked `traefik/dynamic/platform.yml`, which also declares the platform's own fallback-domain router — replace `meusaas.example.com` in that file with the real platform domain before deploying). Regeneration is wired to a `post_save`/`post_delete` signal on `Tenant` (`tenants/signals.py`) so a domain going from unverified → verified takes effect without restarting the stack, per PRD §9. There's no domain-verification UI/flow built yet (DNS TXT-record proof of ownership was the intended design, per the original plan) — `Tenant.domain_verified` currently has to be flipped manually (e.g. via `/admin/`).
+
+SQLite lives on a named volume (`sqlite_data:/data`, path driven by `DATABASE_PATH` env var) and uploaded media on another (`media_data:/app/media`) — both because the container filesystem itself is ephemeral.

@@ -1,0 +1,29 @@
+# Static Traefik config. Loaded once at container start (unlike
+# traefik/dynamic/*, which is hot-reloaded — see providers.file.watch below).
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+
+providers:
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      # TODO: trocar pelo e-mail real do operador antes de rodar em produção.
+      email: "admin@example.com"
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+
+log:
+  level: INFO

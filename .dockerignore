@@ -1,0 +1,19 @@
+.git/
+.venv/
+__pycache__/
+*.pyc
+.env
+db.sqlite3
+media/
+staticfiles/
+node_modules/
+frontend/node_modules/
+traefik/acme.json
+traefik/dynamic/tenants.yml
+
+# Sample/demo assets used only by `seed_diamond_tenant` — not needed for
+# the app to run, and the PDF alone is ~90MB, so keep it out of the image.
+diamond-infinity-towers/
+landing-page-exemplo.png
+PRD.md
+CLAUDE.md

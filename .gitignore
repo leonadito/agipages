@@ -11,3 +11,4 @@ static/css/tailwind.css
 *.log
 .DS_Store
 traefik/acme.json
+traefik/dynamic/tenants.yml
