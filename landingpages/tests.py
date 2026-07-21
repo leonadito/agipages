@@ -1,12 +1,14 @@
 import io
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
 
+from leads.models import Lead
 from tenants.models import Tenant
 
 from .forms import get_publish_errors
@@ -107,3 +109,80 @@ class LandingPageTenantIsolationTests(TestCase):
         response = self.client.get(reverse("landingpages:list"))
         self.assertContains(response, "Página do A")
         self.assertNotContains(response, "Página do B")
+
+
+class PublicPageTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.tenant = Tenant.objects.create(name="Diamond Towers", slug="diamond-towers")
+        self.other_tenant = Tenant.objects.create(name="Other Tenant", slug="other-tenant")
+        self.published_page = LandingPage.objects.create(
+            tenant=self.tenant,
+            title="Casas em Tramandaí",
+            status=LandingPage.PUBLISHED,
+            hero_title="Casas em Tramandaí",
+            lead_form_heading="Receba informações",
+        )
+        self.draft_page = LandingPage.objects.create(
+            tenant=self.tenant, title="Rascunho", status=LandingPage.DRAFT
+        )
+
+    def _public_url(self, tenant, page):
+        return reverse(
+            "public_page", kwargs={"tenant_slug": tenant.slug, "page_slug": page.slug}
+        )
+
+    def test_published_page_reachable_via_path_fallback(self):
+        response = self.client.get(self._public_url(self.tenant, self.published_page))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Casas em Tramandaí")
+
+    def test_draft_page_404s_publicly(self):
+        response = self.client.get(self._public_url(self.tenant, self.draft_page))
+        self.assertEqual(response.status_code, 404)
+
+    def test_cross_tenant_slug_spoofing_404s(self):
+        # published_page belongs to self.tenant — requesting it through
+        # other_tenant's slug must not leak it.
+        response = self.client.get(self._public_url(self.other_tenant, self.published_page))
+        self.assertEqual(response.status_code, 404)
+
+    def test_utm_params_captured_as_hidden_inputs(self):
+        url = self._public_url(self.tenant, self.published_page)
+        response = self.client.get(url, {"utm_source": "facebook", "utm_campaign": "teste"})
+        self.assertContains(response, 'name="utm_source" value="facebook"')
+        self.assertContains(response, 'name="utm_campaign" value="teste"')
+
+    def test_lead_capture_saves_utm_and_creates_lead(self):
+        url = self._public_url(self.tenant, self.published_page)
+        response = self.client.post(
+            url,
+            {
+                "name": "Maria",
+                "email": "maria@example.com",
+                "phone": "51999999999",
+                "city": "Torres",
+                "utm_source": "facebook",
+                "website": "",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        lead = Lead.objects.get(email="maria@example.com")
+        self.assertEqual(lead.utm_source, "facebook")
+        self.assertEqual(lead.tenant, self.tenant)
+        self.assertEqual(lead.landing_page, self.published_page)
+
+    def test_honeypot_filled_does_not_create_lead(self):
+        url = self._public_url(self.tenant, self.published_page)
+        response = self.client.post(
+            url,
+            {
+                "name": "Bot",
+                "email": "bot@example.com",
+                "phone": "000",
+                "city": "Bot",
+                "website": "http://spam.com",
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Lead.objects.filter(email="bot@example.com").exists())

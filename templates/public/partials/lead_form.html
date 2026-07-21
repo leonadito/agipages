@@ -1,0 +1,38 @@
+<div id="lead-form-wrapper">
+    <form hx-post="{{ request.path }}" hx-target="#lead-form-wrapper" hx-swap="outerHTML" class="space-y-4">
+        {% csrf_token %}
+        <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true">
+            {{ form.website }}
+        </div>
+        {% for key, value in tracking.items %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endfor %}
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700" for="{{ form.name.id_for_label }}">Nome *</label>
+            {{ form.name }}
+            {% for error in form.name.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700" for="{{ form.email.id_for_label }}">Email *</label>
+            {{ form.email }}
+            {% for error in form.email.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700" for="{{ form.phone.id_for_label }}">Telefone *</label>
+            {{ form.phone }}
+            {% for error in form.phone.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700" for="{{ form.city.id_for_label }}">Cidade *</label>
+            {{ form.city }}
+            {% for error in form.city.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+
+        <button type="submit"
+                style="background-color: {{ landing_page.lead_form_button_color|default:'#2563eb' }};"
+                class="w-full rounded-md px-4 py-2 font-medium text-white">
+            {{ landing_page.lead_form_button_text|default:"Obter informações" }}
+        </button>
+    </form>
+</div>

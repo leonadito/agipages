@@ -1,0 +1,9 @@
+<div id="lead-form-wrapper" class="rounded-md border border-green-200 bg-green-50 p-6 text-center">
+    <p class="font-medium text-green-800">Recebemos seus dados! Em breve um consultor entrará em contato.</p>
+</div>
+{% if landing_page.facebook_pixel_id %}
+<script>if (window.fbq) { fbq('track', 'Lead'); }</script>
+{% endif %}
+{% if landing_page.google_ads_id %}
+<script>if (window.gtag) { gtag('event', 'conversion', {'send_to': '{{ landing_page.google_ads_id }}'}); }</script>
+{% endif %}
