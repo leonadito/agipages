@@ -106,7 +106,9 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_URL = "accounts:login"
-LOGIN_REDIRECT_URL = "landingpages:list"
+# Temporary target: core:dashboard until Milestone 3 adds the landing pages
+# list, which will become the real post-login destination.
+LOGIN_REDIRECT_URL = "core:dashboard"
 LOGOUT_REDIRECT_URL = "accounts:login"
 
 # Telegram bot integration (Milestone 6). Empty by default; set in .env.

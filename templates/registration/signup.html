@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Criar conta{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-sm px-4 py-16">
+    <h1 class="text-2xl font-semibold mb-6">Criar conta</h1>
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+            <label class="block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-500">Criar conta</button>
+    </form>
+    <p class="mt-4 text-sm text-gray-600">
+        Já tem conta? <a class="text-blue-600 underline" href="{% url 'accounts:login' %}">Entrar</a>
+    </p>
+</div>
+{% endblock %}
