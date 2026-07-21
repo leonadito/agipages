@@ -10,6 +10,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("accounts.urls")),
     path("dashboard/", include("landingpages.urls")),
+    path("dashboard/leads/", include("leads.urls")),
     path("", TemplateView.as_view(template_name="base.html"), name="home"),
     # Path-based fallback for tenants without a verified custom domain:
     # meusaas.com/<tenant_slug>/<page_slug>/
