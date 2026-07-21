@@ -1,0 +1,12 @@
+<div x-data="{ preview: null }">
+    <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    <input type="file" accept="image/*" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+           @change="preview = $event.target.files.length ? URL.createObjectURL($event.target.files[0]) : null">
+    <template x-if="preview">
+        <img :src="preview" class="mt-2 h-32 w-auto rounded object-cover">
+    </template>
+    {% if field.value %}
+    <img src="{{ field.value.url }}" class="mt-2 h-32 w-auto rounded object-cover" x-show="!preview">
+    {% endif %}
+    {% for error in field.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+</div>

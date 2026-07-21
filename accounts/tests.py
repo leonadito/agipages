@@ -18,12 +18,12 @@ class SignupLoginFlowTests(TestCase):
                 "password2": "S3nhaForte123",
             },
         )
-        self.assertRedirects(response, reverse("core:dashboard"))
+        self.assertRedirects(response, reverse("landingpages:list"))
         user = User.objects.get(email="corretor@example.com")
         self.assertIsNotNone(user.tenant_id)
         self.assertEqual(Tenant.objects.count(), 1)
 
-        dashboard = self.client.get(reverse("core:dashboard"))
+        dashboard = self.client.get(reverse("landingpages:list"))
         self.assertEqual(dashboard.status_code, 200)
 
     def test_signup_rejects_mismatched_passwords(self):
@@ -40,7 +40,7 @@ class SignupLoginFlowTests(TestCase):
         self.assertFalse(User.objects.filter(email="corretor@example.com").exists())
 
     def test_dashboard_requires_login(self):
-        response = self.client.get(reverse("core:dashboard"))
+        response = self.client.get(reverse("landingpages:list"))
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("accounts:login"), response.url)
 
@@ -53,5 +53,5 @@ class SignupLoginFlowTests(TestCase):
         response = self.client.post(reverse("accounts:logout"))
         self.assertRedirects(response, reverse("accounts:login"))
 
-        dashboard = self.client.get(reverse("core:dashboard"))
+        dashboard = self.client.get(reverse("landingpages:list"))
         self.assertEqual(dashboard.status_code, 302)

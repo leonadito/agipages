@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Editar{% else %}Nova{% endif %} landing page{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-4xl px-4 py-10" x-data="{ tab: 1 }">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-semibold">{% if object %}Editar{% else %}Nova{% endif %} landing page</h1>
+        <a href="{% url 'landingpages:list' %}" class="text-sm text-blue-600 underline">Voltar para a lista</a>
+    </div>
+
+    <nav class="flex flex-wrap gap-2 mb-6">
+        {% for n, label in section_tabs %}
+        <button type="button" @click="tab={{ n }}"
+                :class="tab==={{ n }} ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                class="rounded-md px-3 py-1.5 text-sm font-medium">{{ n }}. {{ label }}</button>
+        {% endfor %}
+    </nav>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        {% include "landingpages/partials/field.html" with field=form.title %}
+
+        <div x-show="tab===1" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">1. Hero</h2>
+            {% include "landingpages/partials/image_field_with_preview.html" with field=form.hero_background_image %}
+            {% include "landingpages/partials/field.html" with field=form.hero_background_video_url %}
+            {% include "landingpages/partials/field.html" with field=form.hero_title %}
+            {% include "landingpages/partials/field.html" with field=form.hero_subtitle %}
+            {% include "landingpages/partials/field.html" with field=form.hero_cta_text %}
+            {% include "landingpages/partials/field.html" with field=form.hero_cta_target %}
+        </div>
+
+        <div x-show="tab===2" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">2. Faixa de destaque</h2>
+            {% include "landingpages/partials/field.html" with field=form.highlight_bar_text %}
+        </div>
+
+        <div x-show="tab===3" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">3. Galeria / carrossel</h2>
+            {% include "landingpages/partials/gallery_formset.html" %}
+        </div>
+
+        <div x-show="tab===4" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">4. Condições financeiras</h2>
+            {% include "landingpages/partials/field.html" with field=form.down_payment_text %}
+            {% include "landingpages/partials/field.html" with field=form.installment_text %}
+            {% include "landingpages/partials/field.html" with field=form.total_value_text %}
+            {% include "landingpages/partials/field.html" with field=form.financing_text %}
+        </div>
+
+        <div x-show="tab===5" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">5. Formulário de captura</h2>
+            <p class="text-sm text-gray-500">Os campos do formulário em si (nome, e-mail, telefone, cidade) são fixos no MVP — aqui você edita só a apresentação.</p>
+            {% include "landingpages/partials/field.html" with field=form.lead_form_heading %}
+            {% include "landingpages/partials/field.html" with field=form.lead_form_description %}
+            {% include "landingpages/partials/field.html" with field=form.lead_form_button_text %}
+            {% include "landingpages/partials/field.html" with field=form.lead_form_button_color %}
+        </div>
+
+        <div x-show="tab===6" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">6. Vídeo institucional</h2>
+            {% include "landingpages/partials/field.html" with field=form.video_section_title %}
+            {% include "landingpages/partials/field.html" with field=form.video_embed_url %}
+        </div>
+
+        <div x-show="tab===7" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">7. Requisitos</h2>
+            {% include "landingpages/partials/field.html" with field=form.requirements_title %}
+            {% include "landingpages/partials/field.html" with field=form.requirements_rich_text %}
+        </div>
+
+        <div x-show="tab===8" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">8. Características do imóvel</h2>
+            {% include "landingpages/partials/field.html" with field=form.features_title %}
+            {% include "landingpages/partials/field.html" with field=form.features_rich_text %}
+            {% include "landingpages/partials/image_field_with_preview.html" with field=form.features_image %}
+        </div>
+
+        <div x-show="tab===9" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">9. Orçamento / oportunidade</h2>
+            {% include "landingpages/partials/field.html" with field=form.budget_rich_text %}
+        </div>
+
+        <div x-show="tab===10" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">10. CTA final + rodapé</h2>
+            {% include "landingpages/partials/field.html" with field=form.final_cta_text %}
+            {% include "landingpages/partials/field.html" with field=form.footer_text %}
+            <h3 class="font-medium text-gray-800 pt-2">Rastreamento (por landing page)</h3>
+            {% include "landingpages/partials/field.html" with field=form.facebook_pixel_id %}
+            {% include "landingpages/partials/field.html" with field=form.google_ads_id %}
+        </div>
+
+        <div class="flex items-center gap-3 pt-4">
+            <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-500">Salvar rascunho</button>
+            {% if object %}
+            <span class="text-sm text-gray-500">Depois de salvar, publique na lista de landing pages.</span>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

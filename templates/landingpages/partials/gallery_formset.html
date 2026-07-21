@@ -1,0 +1,40 @@
+<div class="space-y-4">
+    {{ gallery_formset.management_form }}
+    {% for gallery_form in gallery_formset %}
+    <div class="rounded-md border border-gray-200 p-4" x-data="{ preview: null }">
+        {{ gallery_form.id }}
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Imagem</label>
+                <input type="file" accept="image/*" name="{{ gallery_form.image.html_name }}" id="{{ gallery_form.image.id_for_label }}"
+                       @change="preview = $event.target.files.length ? URL.createObjectURL($event.target.files[0]) : null">
+                <template x-if="preview">
+                    <img :src="preview" class="mt-2 h-20 w-auto rounded object-cover">
+                </template>
+                {% if gallery_form.image.value %}
+                <img src="{{ gallery_form.image.value.url }}" class="mt-2 h-20 w-auto rounded object-cover" x-show="!preview">
+                {% endif %}
+                {% for error in gallery_form.image.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ gallery_form.caption.id_for_label }}">Legenda</label>
+                {{ gallery_form.caption }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Ordem</label>
+                <div class="flex items-center gap-1" x-data="{ order: {{ gallery_form.order.value|default:0 }} }">
+                    <button type="button" @click="order = Math.max(0, order - 1)" class="rounded bg-gray-100 px-2 py-1 hover:bg-gray-200">↑</button>
+                    <input type="number" name="{{ gallery_form.order.html_name }}" id="{{ gallery_form.order.id_for_label }}"
+                           x-model="order" class="w-16 text-center">
+                    <button type="button" @click="order = order + 1" class="rounded bg-gray-100 px-2 py-1 hover:bg-gray-200">↓</button>
+                </div>
+            </div>
+        </div>
+        {% if gallery_form.instance.pk %}
+        <label class="mt-3 flex items-center gap-2 text-sm text-red-600">
+            {{ gallery_form.DELETE }} Remover esta imagem
+        </label>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
