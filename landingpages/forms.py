@@ -1,7 +1,7 @@
 from django import forms
 from django.forms import inlineformset_factory
 
-from .models import LandingPage, LandingPageGalleryImage
+from .models import LandingPage, LandingPageAmenity, LandingPageGalleryImage
 
 
 class LandingPageForm(forms.ModelForm):
@@ -22,6 +22,7 @@ class LandingPageForm(forms.ModelForm):
             "requirements_rich_text": forms.Textarea(attrs={"rows": 5}),
             "features_rich_text": forms.Textarea(attrs={"rows": 5}),
             "budget_rich_text": forms.Textarea(attrs={"rows": 5}),
+            "location_rich_text": forms.Textarea(attrs={"rows": 5}),
             "hero_subtitle": forms.Textarea(attrs={"rows": 2}),
             "lead_form_description": forms.Textarea(attrs={"rows": 2}),
         }
@@ -31,6 +32,14 @@ GalleryImageFormSet = inlineformset_factory(
     LandingPage,
     LandingPageGalleryImage,
     fields=("image", "caption", "order"),
+    extra=3,
+    can_delete=True,
+)
+
+AmenityFormSet = inlineformset_factory(
+    LandingPage,
+    LandingPageAmenity,
+    fields=("title", "description", "order"),
     extra=3,
     can_delete=True,
 )

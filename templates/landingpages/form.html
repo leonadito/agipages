@@ -20,11 +20,13 @@
         {{ form.non_field_errors }}
 
         {% include "landingpages/partials/field.html" with field=form.title %}
+        {% include "landingpages/partials/field.html" with field=form.design_variant %}
 
         <div x-show="tab===1" class="space-y-4 rounded-md border border-gray-200 p-4">
             <h2 class="font-medium text-gray-800">1. Hero</h2>
             {% include "landingpages/partials/image_field_with_preview.html" with field=form.hero_background_image %}
             {% include "landingpages/partials/field.html" with field=form.hero_background_video_url %}
+            {% include "landingpages/partials/field.html" with field=form.hero_eyebrow %}
             {% include "landingpages/partials/field.html" with field=form.hero_title %}
             {% include "landingpages/partials/field.html" with field=form.hero_subtitle %}
             {% include "landingpages/partials/field.html" with field=form.hero_cta_text %}
@@ -50,7 +52,14 @@
         </div>
 
         <div x-show="tab===5" class="space-y-4 rounded-md border border-gray-200 p-4">
-            <h2 class="font-medium text-gray-800">5. Formulário de captura</h2>
+            <h2 class="font-medium text-gray-800">5. Localização</h2>
+            <p class="text-sm text-gray-500">Usado pelo design Premium. Ignorado pelo design Padrão.</p>
+            {% include "landingpages/partials/field.html" with field=form.location_title %}
+            {% include "landingpages/partials/field.html" with field=form.location_rich_text %}
+        </div>
+
+        <div x-show="tab===6" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">6. Formulário de captura</h2>
             <p class="text-sm text-gray-500">Os campos do formulário em si (nome, e-mail, telefone, cidade) são fixos no MVP — aqui você edita só a apresentação.</p>
             {% include "landingpages/partials/field.html" with field=form.lead_form_heading %}
             {% include "landingpages/partials/field.html" with field=form.lead_form_description %}
@@ -58,32 +67,38 @@
             {% include "landingpages/partials/field.html" with field=form.lead_form_button_color %}
         </div>
 
-        <div x-show="tab===6" class="space-y-4 rounded-md border border-gray-200 p-4">
-            <h2 class="font-medium text-gray-800">6. Vídeo institucional</h2>
+        <div x-show="tab===7" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">7. Vídeo institucional</h2>
             {% include "landingpages/partials/field.html" with field=form.video_section_title %}
             {% include "landingpages/partials/field.html" with field=form.video_embed_url %}
         </div>
 
-        <div x-show="tab===7" class="space-y-4 rounded-md border border-gray-200 p-4">
-            <h2 class="font-medium text-gray-800">7. Requisitos</h2>
+        <div x-show="tab===8" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">8. Requisitos</h2>
             {% include "landingpages/partials/field.html" with field=form.requirements_title %}
             {% include "landingpages/partials/field.html" with field=form.requirements_rich_text %}
         </div>
 
-        <div x-show="tab===8" class="space-y-4 rounded-md border border-gray-200 p-4">
-            <h2 class="font-medium text-gray-800">8. Características do imóvel</h2>
+        <div x-show="tab===9" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">9. Características do imóvel</h2>
             {% include "landingpages/partials/field.html" with field=form.features_title %}
             {% include "landingpages/partials/field.html" with field=form.features_rich_text %}
             {% include "landingpages/partials/image_field_with_preview.html" with field=form.features_image %}
         </div>
 
-        <div x-show="tab===9" class="space-y-4 rounded-md border border-gray-200 p-4">
-            <h2 class="font-medium text-gray-800">9. Orçamento / oportunidade</h2>
+        <div x-show="tab===10" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">10. Amenidades</h2>
+            <p class="text-sm text-gray-500">Usado pelo design Premium. Ignorado pelo design Padrão.</p>
+            {% include "landingpages/partials/amenity_formset.html" %}
+        </div>
+
+        <div x-show="tab===11" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">11. Orçamento / oportunidade</h2>
             {% include "landingpages/partials/field.html" with field=form.budget_rich_text %}
         </div>
 
-        <div x-show="tab===10" class="space-y-4 rounded-md border border-gray-200 p-4">
-            <h2 class="font-medium text-gray-800">10. CTA final + rodapé</h2>
+        <div x-show="tab===12" class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">12. CTA final + rodapé</h2>
             {% include "landingpages/partials/field.html" with field=form.final_cta_text %}
             {% include "landingpages/partials/field.html" with field=form.footer_text %}
             <h3 class="font-medium text-gray-800 pt-2">Rastreamento (por landing page)</h3>

@@ -1,0 +1,28 @@
+<div class="space-y-4">
+    {{ amenity_formset.management_form }}
+    {% for amenity_form in amenity_formset %}
+    <div class="rounded-md border border-gray-200 p-4">
+        {{ amenity_form.id }}
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ amenity_form.title.id_for_label }}">Título</label>
+                {{ amenity_form.title }}
+                {% for error in amenity_form.title.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ amenity_form.description.id_for_label }}">Descrição</label>
+                {{ amenity_form.description }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ amenity_form.order.id_for_label }}">Ordem</label>
+                {{ amenity_form.order }}
+            </div>
+        </div>
+        {% if amenity_form.instance.pk %}
+        <label class="mt-3 flex items-center gap-2 text-sm text-red-600">
+            {{ amenity_form.DELETE }} Remover esta amenidade
+        </label>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>

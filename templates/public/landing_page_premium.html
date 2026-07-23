@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}{{ landing_page.title }}{% endblock %}
+
+{% block extra_head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+    .premium-serif { font-family: 'Cormorant Garamond', serif; }
+    .premium-sans { font-family: 'Inter', sans-serif; }
+</style>
+{% if landing_page.facebook_pixel_id %}
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '{{ landing_page.facebook_pixel_id }}');
+fbq('track', 'PageView');
+</script>
+{% endif %}
+{% if landing_page.google_ads_id %}
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ landing_page.google_ads_id }}"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '{{ landing_page.google_ads_id }}');
+</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<main class="premium-sans bg-neutral-950 text-neutral-100">
+
+    {# 1. Hero #}
+    <section class="relative flex min-h-screen items-center justify-center bg-neutral-950 bg-cover bg-center text-center"
+              {% if landing_page.hero_background_image %}style="background-image: linear-gradient(180deg, rgba(10,10,10,0.55) 0%, rgba(10,10,10,0.75) 55%, rgba(10,10,10,0.97) 100%), url('{{ landing_page.hero_background_image.url }}');"{% endif %}>
+        <div class="mx-auto max-w-3xl px-6 py-24">
+            {% if landing_page.hero_eyebrow %}
+            <p class="mb-5 text-xs font-medium uppercase tracking-[0.35em] text-emerald-400">{{ landing_page.hero_eyebrow }}</p>
+            {% endif %}
+            <h1 class="premium-serif text-5xl font-semibold leading-tight text-white sm:text-6xl md:text-7xl">{{ landing_page.hero_title }}</h1>
+            {% if landing_page.hero_subtitle %}
+            <p class="mx-auto mt-6 max-w-xl text-base font-light text-neutral-300 sm:text-lg">{{ landing_page.hero_subtitle }}</p>
+            {% endif %}
+            <a href="#{{ landing_page.hero_cta_target|default:'lead-form' }}"
+               class="mt-10 inline-block rounded-full border border-emerald-400/70 bg-emerald-400/10 px-9 py-3.5 text-sm font-medium uppercase tracking-widest text-emerald-300 transition hover:bg-emerald-400 hover:text-neutral-950">
+                {{ landing_page.hero_cta_text }}
+            </a>
+        </div>
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 text-neutral-500">
+            <svg class="h-6 w-6 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7" /></svg>
+        </div>
+    </section>
+
+    {# 2. Faixa de destaque #}
+    {% if landing_page.highlight_bar_text %}
+    <section class="border-y border-emerald-400/20 bg-neutral-900 px-4 py-5 text-center">
+        <p class="text-xs font-medium uppercase tracking-[0.25em] text-emerald-300 sm:text-sm">{{ landing_page.highlight_bar_text }}</p>
+    </section>
+    {% endif %}
+
+    {# 3. Galeria / carrossel #}
+    {% if landing_page.gallery_images.exists %}
+    <section class="bg-neutral-950 px-4 py-20 sm:px-8" x-data="{ current: 0, total: {{ landing_page.gallery_images.count }} }">
+        <div class="mx-auto max-w-6xl">
+            <div class="relative overflow-hidden rounded-sm">
+                {% for image in landing_page.gallery_images.all %}
+                <img x-show="current === {{ forloop.counter0 }}" src="{{ image.image.url }}" alt="{{ image.caption }}"
+                     loading="lazy" class="h-72 w-full object-cover sm:h-[32rem]">
+                {% endfor %}
+                <button type="button" @click="current = (current - 1 + total) % total"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/40 px-3.5 py-2 text-lg text-white backdrop-blur hover:bg-black/70">‹</button>
+                <button type="button" @click="current = (current + 1) % total"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/40 px-3.5 py-2 text-lg text-white backdrop-blur hover:bg-black/70">›</button>
+            </div>
+            <div class="mt-5 flex justify-center gap-2">
+                {% for image in landing_page.gallery_images.all %}
+                <button type="button" @click="current = {{ forloop.counter0 }}"
+                        :class="current === {{ forloop.counter0 }} ? 'bg-emerald-400 w-6' : 'bg-neutral-700 w-2'"
+                        class="h-2 rounded-full transition-all"></button>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {# 4. Condições financeiras #}
+    {% if landing_page.down_payment_text or landing_page.installment_text or landing_page.total_value_text %}
+    <section class="bg-neutral-900 px-4 py-16">
+        <div class="mx-auto grid max-w-4xl gap-6 text-center sm:grid-cols-3">
+            {% if landing_page.down_payment_text %}
+            <div class="rounded-sm border border-white/10 px-6 py-8">
+                <p class="premium-serif text-2xl text-emerald-300">{{ landing_page.down_payment_text }}</p>
+            </div>
+            {% endif %}
+            {% if landing_page.installment_text %}
+            <div class="rounded-sm border border-white/10 px-6 py-8">
+                <p class="premium-serif text-2xl text-emerald-300">{{ landing_page.installment_text }}</p>
+            </div>
+            {% endif %}
+            {% if landing_page.total_value_text %}
+            <div class="rounded-sm border border-white/10 px-6 py-8">
+                <p class="premium-serif text-2xl text-emerald-300">{{ landing_page.total_value_text }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% if landing_page.financing_text %}
+        <p class="mt-6 text-center text-xs text-neutral-500">{{ landing_page.financing_text }}</p>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    {# Localização #}
+    {% if landing_page.location_rich_text %}
+    <section class="bg-neutral-950 px-4 py-24 sm:px-8">
+        <div class="mx-auto grid max-w-5xl gap-10 sm:grid-cols-[auto,1fr] sm:items-start">
+            <svg class="h-10 w-10 shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <div>
+                {% if landing_page.location_title %}
+                <h2 class="premium-serif text-3xl text-white sm:text-4xl">{{ landing_page.location_title }}</h2>
+                {% endif %}
+                <div class="mt-4 space-y-3 text-neutral-400">{{ landing_page.location_rich_text|linebreaks }}</div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {# 5. Formulário de captura #}
+    <section id="lead-form" class="bg-emerald-400/5 px-4 py-24">
+        <div class="mx-auto max-w-md rounded-sm bg-white p-8 text-neutral-900 shadow-2xl shadow-emerald-950/40 sm:p-10">
+            <h2 class="premium-serif text-center text-2xl text-neutral-900">{{ landing_page.lead_form_heading }}</h2>
+            {% if landing_page.lead_form_description %}
+            <p class="mt-2 text-center text-sm text-gray-500">{{ landing_page.lead_form_description }}</p>
+            {% endif %}
+            <div class="mt-6">
+                {% include "public/partials/lead_form.html" %}
+            </div>
+        </div>
+    </section>
+
+    {# 6. Vídeo institucional #}
+    {% if landing_page.video_embed_url %}
+    <section class="bg-neutral-950 px-4 py-20 text-center sm:px-8">
+        {% if landing_page.video_section_title %}
+        <h2 class="premium-serif mb-8 text-3xl text-white">{{ landing_page.video_section_title }}</h2>
+        {% endif %}
+        <div class="mx-auto aspect-video w-full max-w-4xl overflow-hidden rounded-sm">
+            <iframe src="{{ landing_page.video_embed_url }}" class="h-full w-full" allowfullscreen loading="lazy"></iframe>
+        </div>
+    </section>
+    {% endif %}
+
+    {# 7. Requisitos #}
+    {% if landing_page.requirements_rich_text %}
+    <section class="bg-neutral-900 px-4 py-20 sm:px-8">
+        <div class="mx-auto max-w-2xl text-center">
+            <h2 class="premium-serif text-3xl text-white">{{ landing_page.requirements_title }}</h2>
+            <div class="mt-4 space-y-2 text-neutral-400">{{ landing_page.requirements_rich_text|linebreaks }}</div>
+        </div>
+    </section>
+    {% endif %}
+
+    {# 8. Características / torres #}
+    {% if landing_page.features_rich_text %}
+    <section class="bg-neutral-950 px-4 py-24 sm:px-8">
+        <div class="mx-auto grid max-w-5xl gap-10 sm:grid-cols-2 sm:items-center">
+            {% if landing_page.features_image %}
+            <img src="{{ landing_page.features_image.url }}" alt="" class="rounded-sm object-cover">
+            {% endif %}
+            <div>
+                <h2 class="premium-serif text-3xl text-white sm:text-4xl">{{ landing_page.features_title }}</h2>
+                <div class="mt-4 space-y-3 text-neutral-400">{{ landing_page.features_rich_text|linebreaks }}</div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {# Amenidades #}
+    {% if landing_page.amenities.exists %}
+    <section class="bg-neutral-900 px-4 py-24 sm:px-8">
+        <div class="mx-auto max-w-5xl">
+            <h2 class="premium-serif text-center text-3xl text-white sm:text-4xl">Infinitas Possibilidades</h2>
+            <div class="mt-12 grid grid-cols-2 gap-px overflow-hidden rounded-sm bg-white/10 sm:grid-cols-3">
+                {% for amenity in landing_page.amenities.all %}
+                <div class="bg-neutral-900 px-5 py-8 text-center transition hover:bg-neutral-800">
+                    <h3 class="premium-serif text-lg text-emerald-300">{{ amenity.title }}</h3>
+                    {% if amenity.description %}
+                    <p class="mt-2 text-xs text-neutral-500">{{ amenity.description }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {# 9. Orçamento / oportunidade #}
+    {% if landing_page.budget_rich_text %}
+    <section class="bg-neutral-950 px-4 py-24 text-center sm:px-8">
+        <div class="mx-auto max-w-2xl rounded-sm border border-emerald-400/20 px-8 py-12">
+            <h2 class="premium-serif text-3xl text-white">Acessível ao Seu Padrão</h2>
+            <div class="mx-auto mt-4 max-w-xl space-y-2 text-neutral-400">{{ landing_page.budget_rich_text|linebreaks }}</div>
+        </div>
+    </section>
+    {% endif %}
+
+    {# 10. CTA final + rodapé #}
+    <section class="bg-neutral-900 px-4 py-16 text-center">
+        <a href="#{{ landing_page.hero_cta_target|default:'lead-form' }}"
+           class="inline-block rounded-full border border-emerald-400/70 bg-emerald-400/10 px-9 py-3.5 text-sm font-medium uppercase tracking-widest text-emerald-300 transition hover:bg-emerald-400 hover:text-neutral-950">
+            {{ landing_page.final_cta_text|default:landing_page.hero_cta_text }}
+        </a>
+    </section>
+    <footer class="bg-neutral-950 px-4 py-6 text-center text-xs uppercase tracking-widest text-neutral-600">
+        {{ landing_page.footer_text }}
+    </footer>
+</main>
+{% endblock %}

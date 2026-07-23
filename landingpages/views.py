@@ -11,7 +11,7 @@ from core.mixins import TenantDashboardMixin
 from leads.forms import LeadCaptureForm
 from tenants.models import Tenant
 
-from .forms import GalleryImageFormSet, LandingPageForm, get_publish_errors
+from .forms import AmenityFormSet, GalleryImageFormSet, LandingPageForm, get_publish_errors
 from .models import LandingPage, LandingPageAuditLog
 
 
@@ -33,12 +33,14 @@ class LandingPageFormViewMixin:
         (2, "Faixa de destaque"),
         (3, "Galeria"),
         (4, "Condições financeiras"),
-        (5, "Formulário de captura"),
-        (6, "Vídeo institucional"),
-        (7, "Requisitos"),
-        (8, "Características"),
-        (9, "Orçamento"),
-        (10, "CTA final + rodapé"),
+        (5, "Localização"),
+        (6, "Formulário de captura"),
+        (7, "Vídeo institucional"),
+        (8, "Requisitos"),
+        (9, "Características"),
+        (10, "Amenidades"),
+        (11, "Orçamento"),
+        (12, "CTA final + rodapé"),
     ]
 
     def get_queryset(self):
@@ -51,14 +53,19 @@ class LandingPageFormViewMixin:
             context["gallery_formset"] = GalleryImageFormSet(
                 self.request.POST, self.request.FILES, instance=self.object
             )
+            context["amenity_formset"] = AmenityFormSet(
+                self.request.POST, instance=self.object
+            )
         else:
             context["gallery_formset"] = GalleryImageFormSet(instance=self.object)
+            context["amenity_formset"] = AmenityFormSet(instance=self.object)
         return context
 
     def form_valid(self, form):
         context = self.get_context_data()
         gallery_formset = context["gallery_formset"]
-        if not gallery_formset.is_valid():
+        amenity_formset = context["amenity_formset"]
+        if not gallery_formset.is_valid() or not amenity_formset.is_valid():
             return self.render_to_response(self.get_context_data(form=form))
 
         with transaction.atomic():
@@ -73,6 +80,9 @@ class LandingPageFormViewMixin:
 
             gallery_formset.instance = landing_page
             gallery_formset.save()
+
+            amenity_formset.instance = landing_page
+            amenity_formset.save()
 
             LandingPageAuditLog.objects.create(
                 landing_page=landing_page,
@@ -189,9 +199,14 @@ def public_page(request, page_slug, tenant_slug=None):
         )
 
     form = LeadCaptureForm()
+    template_name = (
+        "public/landing_page_premium.html"
+        if landing_page.design_variant == LandingPage.PREMIUM
+        else "public/landing_page.html"
+    )
     return render(
         request,
-        "public/landing_page.html",
+        template_name,
         {
             "landing_page": landing_page,
             "tenant": tenant,
