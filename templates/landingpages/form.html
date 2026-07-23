@@ -49,6 +49,12 @@
             {% include "landingpages/partials/field.html" with field=form.installment_text %}
             {% include "landingpages/partials/field.html" with field=form.total_value_text %}
             {% include "landingpages/partials/field.html" with field=form.financing_text %}
+            <div>
+                {% include "landingpages/partials/field.html" with field=form.financial_conditions_html %}
+                <p class="mt-1 text-xs text-amber-600">
+                    Avançado: HTML puro, inserido sem alterações na página pública. Use só se souber o que está fazendo.
+                </p>
+            </div>
         </div>
 
         <div x-show="tab===5" class="space-y-4 rounded-md border border-gray-200 p-4">

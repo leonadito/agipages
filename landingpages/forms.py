@@ -25,6 +25,9 @@ class LandingPageForm(forms.ModelForm):
             "location_rich_text": forms.Textarea(attrs={"rows": 5}),
             "hero_subtitle": forms.Textarea(attrs={"rows": 2}),
             "lead_form_description": forms.Textarea(attrs={"rows": 2}),
+            "financial_conditions_html": forms.Textarea(
+                attrs={"rows": 6, "class": "font-mono text-sm"}
+            ),
         }
 
 

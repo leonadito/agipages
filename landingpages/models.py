@@ -72,6 +72,12 @@ class LandingPage(models.Model):
     financing_text = models.CharField(
         "Texto sobre financiamento", max_length=255, blank=True
     )
+    # Conteúdo livre em HTML puro para esta seção (ex: tabela de valores
+    # customizada) — renderizado sem escapar no template público, então só
+    # o próprio dono do tenant (autenticado) pode preenchê-lo.
+    financial_conditions_html = models.TextField(
+        "Conteúdo HTML personalizado (opcional)", blank=True
+    )
 
     # 5. Formulário de captura (apresentação — campos do form em si são fixos)
     lead_form_heading = models.CharField(

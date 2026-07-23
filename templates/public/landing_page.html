@@ -72,12 +72,15 @@ gtag('config', '{{ landing_page.google_ads_id }}');
     {% endif %}
 
     {# 4. Condições financeiras #}
-    {% if landing_page.down_payment_text or landing_page.installment_text or landing_page.total_value_text %}
+    {% if landing_page.down_payment_text or landing_page.installment_text or landing_page.total_value_text or landing_page.financial_conditions_html %}
     <section class="bg-black px-4 py-6 text-center text-white">
         {% if landing_page.down_payment_text %}<p class="font-semibold">{{ landing_page.down_payment_text }}</p>{% endif %}
         {% if landing_page.installment_text %}<p class="font-semibold">{{ landing_page.installment_text }}</p>{% endif %}
         {% if landing_page.total_value_text %}<p class="font-semibold">{{ landing_page.total_value_text }}</p>{% endif %}
         {% if landing_page.financing_text %}<p class="mt-2 text-sm text-gray-300">{{ landing_page.financing_text }}</p>{% endif %}
+        {% if landing_page.financial_conditions_html %}
+        <div class="mt-4">{{ landing_page.financial_conditions_html|safe }}</div>
+        {% endif %}
     </section>
     {% endif %}
 
