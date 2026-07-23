@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A multi-tenant SaaS where real-estate agents/agencies build lead-capture landing pages for property launches via a structured form (no code/designer needed), then manage received leads in a dashboard with real-time Telegram notifications. Full spec in `PRD.md` (Portuguese) — read it for anything not covered here. `landing-page-exemplo.png` is the visual reference the public template follows; `diamond-infinity-towers/` holds real sample content used to seed a demo tenant.
 
-The MVP (all 7 milestones below) is implemented. Commit history (`git log --oneline`) maps 1:1 to these milestones if you need the order things were built in.
+The MVP (all 7 milestones below) is implemented, plus some post-MVP additions on top (premium design variant, free-form HTML field — see "Landing pages" below). Commit history (`git log --oneline`) maps 1:1 to the milestones, then continues with the later additions, if you need the order things were built in.
 
 ## Commands
 
@@ -22,7 +22,7 @@ python manage.py test leads.tests.LeadDashboardTests.test_filter_by_status  # si
 
 python manage.py makemigrations && python manage.py migrate
 python manage.py createsuperuser
-python manage.py seed_diamond_tenant # demo tenant + published landing page from diamond-infinity-towers/ assets
+python manage.py seed_diamond_tenant # demo tenant + a standard-variant and a premium-variant published landing page, both from diamond-infinity-towers/ assets
 python manage.py generate_traefik_config  # force-regenerate traefik/dynamic/tenants.yml (also runs automatically via a Tenant post_save/post_delete signal)
 
 # Tailwind (run from frontend/, or --prefix from repo root)
@@ -46,9 +46,17 @@ The public site is the one place a URL segment IS allowed to resolve a tenant (`
 
 ### Landing pages (`landingpages/`)
 
-`LandingPage` is one wide model covering all 10 fixed template sections (hero, faixa de destaque, condições financeiras, formulário de captura, vídeo institucional, requisitos, características, orçamento, CTA final + rodapé — see PRD §5 for the exact field list per section), plus `LandingPageGalleryImage` (ordered, FK'd) and `LandingPageAuditLog` (who created/updated/published/unpublished, when — PRD §8 auditability). Slug is auto-generated from title and **locked forever once `published_at` is ever set** (`LandingPage.save()` enforces this by re-reading the DB row), so a published public URL never breaks even if the page is later unpublished and edited again. Publishing is blocked (see `landingpages/forms.py::get_publish_errors`) until a minimum set of fields + at least one gallery image exist.
+`LandingPage` is one wide model covering the 10 fixed template sections (hero, faixa de destaque, condições financeiras, formulário de captura, vídeo institucional, requisitos, características, orçamento, CTA final + rodapé — see PRD §5 for the exact field list per section) plus two extras added post-MVP: `design_variant` (`standard`/`premium` — picks which public template renders the page, see below) and `location_title`/`location_rich_text` + the `amenities` relation (`LandingPageAmenity`, ordered, FK'd), both **premium-only**, ignored by the standard template. Also: `LandingPageGalleryImage` (ordered, FK'd) and `LandingPageAuditLog` (who created/updated/published/unpublished, when — PRD §8 auditability). Slug is auto-generated from title and **locked forever once `published_at` is ever set** (`LandingPage.save()` enforces this by re-reading the DB row), so a published public URL never breaks even if the page is later unpublished and edited again. Publishing is blocked (see `landingpages/forms.py::get_publish_errors`) until a minimum set of fields + at least one gallery image exist.
 
-The create/edit form (`templates/landingpages/form.html`) is a single real Django form + an `inlineformset_factory` for gallery images, with Alpine.js doing purely client-side tab switching across the 10 sections (`x-show`, no server round-trip per tab) — there's no server-side wizard.
+Every `LandingPage`/`LandingPageGalleryImage`/`LandingPageAmenity` field has an explicit Portuguese `verbose_name` — without one, Django auto-labels the form field from the Python field name (e.g. `down_payment_text` → "Down payment text"), which leaks English into the dashboard. Set `verbose_name` on any new field on these models.
+
+`financial_conditions_html` (in "4. Condições financeiras") is free-form HTML, rendered with `|safe` on both public templates — deliberately unescaped, since only the authenticated tenant owner can write to it (not visitor input), e.g. to hand-build a per-unit-type pricing table that doesn't fit the fixed text fields. Because it's DB content rather than template-file content, Tailwind's JIT scanner never sees classes used inside it — style it with inline `style="..."` (or classes already defined elsewhere in the destination template, like `.premium-serif` in `landing_page_premium.html`'s own `<style>` block), not Tailwind utility classes.
+
+The create/edit form (`templates/landingpages/form.html`) is a single real Django form + two `inlineformset_factory`s (gallery images, amenities), with Alpine.js doing purely client-side tab switching across 12 tabs (`x-show`, no server round-trip per tab) — there's no server-side wizard.
+
+### Two public templates, one model
+
+`landingpages/views.py::public_page` picks the template by `design_variant`: `templates/public/landing_page.html` (standard — matches `landing-page-exemplo.png`) or `templates/public/landing_page_premium.html` (dark/serif/emerald design for high-end launches, adds the Localização and Amenidades sections). Both are driven by the exact same `LandingPage` fields/context — adding a field to one almost always means updating the other too, or deliberately leaving it standard-only/premium-only (document which, like `location_*`/`amenities` above).
 
 ### Public site + leads (`landingpages/views.py::public_page`, `leads/`)
 
