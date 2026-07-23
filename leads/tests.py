@@ -56,7 +56,7 @@ class LeadDashboardTests(TestCase):
         self.tenant_a = Tenant.objects.create(name="Tenant A", slug="tenant-a")
         self.tenant_b = Tenant.objects.create(name="Tenant B", slug="tenant-b")
         self.user_a = User.objects.create_user(
-            email="a@example.com", password="SenhaForte123", tenant=self.tenant_a
+            username="usuarioa", email="a@example.com", password="SenhaForte123", tenant=self.tenant_a
         )
         self.page_a1 = LandingPage.objects.create(tenant=self.tenant_a, title="Página A1")
         self.page_a2 = LandingPage.objects.create(tenant=self.tenant_a, title="Página A2")

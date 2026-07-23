@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import password_validation
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import transaction
 from django.utils.text import slugify
 
@@ -10,9 +11,18 @@ from .models import User
 
 class SignupForm(forms.Form):
     tenant_name = forms.CharField(label="Nome da imobiliária/conta", max_length=255)
+    username = forms.CharField(
+        label="Usuário", max_length=150, validators=[UnicodeUsernameValidator()]
+    )
     email = forms.EmailField(label="E-mail")
     password1 = forms.CharField(label="Senha", widget=forms.PasswordInput)
     password2 = forms.CharField(label="Confirme a senha", widget=forms.PasswordInput)
+
+    def clean_username(self):
+        username = self.cleaned_data["username"]
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError("Este nome de usuário já está em uso.")
+        return username
 
     def clean_email(self):
         email = self.cleaned_data["email"].lower()
@@ -45,6 +55,7 @@ class SignupForm(forms.Form):
             slug=self._unique_tenant_slug(self.cleaned_data["tenant_name"]),
         )
         return User.objects.create_user(
+            username=self.cleaned_data["username"],
             email=self.cleaned_data["email"],
             password=self.cleaned_data["password2"],
             tenant=tenant,

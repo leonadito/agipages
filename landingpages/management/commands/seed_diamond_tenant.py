@@ -18,6 +18,7 @@ ASSETS_DIR = settings.BASE_DIR / "diamond-infinity-towers"
 GALLERY_DIR = ASSETS_DIR / "diamond-infinity-towers_imagens-empreendimento"
 
 DEMO_TENANT_SLUG = "diamond-infinity-towers"
+DEMO_USER_USERNAME = "demo"
 DEMO_USER_EMAIL = "demo@diamondtowers.com.br"
 DEMO_USER_PASSWORD = "DiamondDemo123"
 
@@ -58,7 +59,7 @@ class Command(BaseCommand):
         )
 
         user, user_created = User.objects.get_or_create(
-            email=DEMO_USER_EMAIL, defaults={"tenant": tenant}
+            username=DEMO_USER_USERNAME, defaults={"email": DEMO_USER_EMAIL, "tenant": tenant}
         )
         if user_created:
             user.set_password(DEMO_USER_PASSWORD)
@@ -158,7 +159,7 @@ class Command(BaseCommand):
         public_url = f"/{tenant.slug}/{landing_page.slug}/"
         self.stdout.write(self.style.SUCCESS("Seed concluído."))
         self.stdout.write(f"Tenant: {tenant.name} (slug={tenant.slug})")
-        self.stdout.write(f"Usuário demo: {DEMO_USER_EMAIL} / senha: {DEMO_USER_PASSWORD}")
+        self.stdout.write(f"Usuário demo: {DEMO_USER_USERNAME} / senha: {DEMO_USER_PASSWORD}")
         self.stdout.write(f"Landing page publicada em: {public_url}")
 
         premium_page = self._seed_premium_page(tenant, user, gallery_files)

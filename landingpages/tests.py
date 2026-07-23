@@ -83,10 +83,10 @@ class LandingPageTenantIsolationTests(TestCase):
         self.tenant_a = Tenant.objects.create(name="Tenant A", slug="tenant-a")
         self.tenant_b = Tenant.objects.create(name="Tenant B", slug="tenant-b")
         self.user_a = User.objects.create_user(
-            email="a@example.com", password="SenhaForte123", tenant=self.tenant_a
+            username="usuarioa", email="a@example.com", password="SenhaForte123", tenant=self.tenant_a
         )
         self.user_b = User.objects.create_user(
-            email="b@example.com", password="SenhaForte123", tenant=self.tenant_b
+            username="usuariob", email="b@example.com", password="SenhaForte123", tenant=self.tenant_b
         )
         self.page_b = LandingPage.objects.create(tenant=self.tenant_b, title="Página do B")
 
