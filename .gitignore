@@ -12,3 +12,4 @@ static/css/tailwind.css
 .DS_Store
 traefik/acme.json
 traefik/dynamic/tenants.yml
+diamond-infinity-towers/
