@@ -29,24 +29,37 @@ http:
 
     # NOTE: agitare.com.br (bare apex) has no DNS A record at all (confirmed
     # via public DNS — only www.agitare.com.br resolves), and the old
-    # certbot cert only ever covered www.agitare.com.br too. Deliberately
-    # NOT bundling them into one tls.domains/SAN request like a "real"
-    # single cert would — ACME validates every SAN independently, and one
-    # unreachable name (the apex) fails the whole certificate, breaking
-    # the working www hostname along with it. Leaving both routers on a
-    # bare certResolver (no explicit domains list) makes Traefik request
-    # an on-demand cert per actual SNI hostname instead — www succeeds
-    # independently, and the apex (which never had a valid cert anyway)
-    # just keeps falling back to Traefik's self-signed default.
-    agitare-websecure:
-      rule: "Host(`agitare.com.br`) || Host(`www.agitare.com.br`)"
+    # certbot cert only ever covered www.agitare.com.br too. Traefik
+    # computes the certificate's domain list from the Host() names found
+    # in EACH router's rule at config-load time (not per-SNI at request
+    # time) — so a single router with "Host(a) || Host(b)" always
+    # requests one bundled certificate for both, and ACME fails the whole
+    # thing if either name doesn't validate. Keeping them on two entirely
+    # separate routers (one Host() each) is what actually gets www its
+    # own independent certificate; the apex keeps failing ACME/falling
+    # back to Traefik's self-signed default, same as before (it never had
+    # a valid cert either).
+    agitare-www-websecure:
+      rule: "Host(`www.agitare.com.br`)"
       service: agitare
       entryPoints:
         - websecure
       tls:
         certResolver: letsencrypt
-    agitare-web:
-      rule: "Host(`agitare.com.br`) || Host(`www.agitare.com.br`)"
+    agitare-www-web:
+      rule: "Host(`www.agitare.com.br`)"
+      service: agitare
+      entryPoints:
+        - web
+    agitare-apex-websecure:
+      rule: "Host(`agitare.com.br`)"
+      service: agitare
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+    agitare-apex-web:
+      rule: "Host(`agitare.com.br`)"
       service: agitare
       entryPoints:
         - web
@@ -117,16 +130,30 @@ http:
       entryPoints:
         - web
       priority: 100
-    agitare-static-websecure:
-      rule: "(Host(`agitare.com.br`) || Host(`www.agitare.com.br`)) && PathPrefix(`/static/`)"
+    agitare-www-static-websecure:
+      rule: "Host(`www.agitare.com.br`) && PathPrefix(`/static/`)"
       service: internal-static
       entryPoints:
         - websecure
       tls:
         certResolver: letsencrypt
       priority: 100
-    agitare-static-web:
-      rule: "(Host(`agitare.com.br`) || Host(`www.agitare.com.br`)) && PathPrefix(`/static/`)"
+    agitare-www-static-web:
+      rule: "Host(`www.agitare.com.br`) && PathPrefix(`/static/`)"
+      service: internal-static
+      entryPoints:
+        - web
+      priority: 100
+    agitare-apex-static-websecure:
+      rule: "Host(`agitare.com.br`) && PathPrefix(`/static/`)"
+      service: internal-static
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      priority: 100
+    agitare-apex-static-web:
+      rule: "Host(`agitare.com.br`) && PathPrefix(`/static/`)"
       service: internal-static
       entryPoints:
         - web
