@@ -19,8 +19,7 @@ providers:
 certificatesResolvers:
   letsencrypt:
     acme:
-      # TODO: trocar pelo e-mail real do operador antes de rodar em produção.
-      email: "admin@example.com"
+      email: "leonadito@gmail.com"
       storage: /letsencrypt/acme.json
       httpChallenge:
         entryPoint: web

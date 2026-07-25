@@ -10,15 +10,31 @@ services:
       - sqlite_data:/data
       - media_data:/app/media
     ports:
-      # Bound to localhost only — the host's nginx (managed outside this
-      # compose file, same pattern as the other apps on this VPS) terminates
-      # TLS and reverse-proxies here. Port must stay in sync with the
-      # nginx site config's proxy_pass.
+      # Bound to localhost only — Traefik (network_mode: host, below)
+      # reaches this exactly like the host's nginx used to, via loopback.
       - "127.0.0.1:8002:8000"
     restart: unless-stopped
+
+  traefik:
+    image: traefik:v3.3
+    # Host networking so Traefik can reach this app AND the other two
+    # apps this VPS hosts (agitare, metaleads) via their existing
+    # 127.0.0.1:800x ports, exactly like the nginx it replaces — no need
+    # to join those other projects' Docker networks or touch their compose
+    # files. Entrypoints (:80/:443, see traefik/traefik.yml) bind directly
+    # on the host as a result.
+    network_mode: host
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik_acme:/letsencrypt
+    restart: unless-stopped
+    depends_on:
+      - web
 
 volumes:
   # SQLite file and uploaded media both need to survive rebuilds/
   # redeploys — the container filesystem itself is ephemeral (PRD §9/§10).
   sqlite_data:
   media_data:
+  traefik_acme:
