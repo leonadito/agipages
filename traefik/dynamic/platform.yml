@@ -27,6 +27,17 @@ http:
       entryPoints:
         - web
 
+    # NOTE: agitare.com.br (bare apex) has no DNS A record at all (confirmed
+    # via public DNS — only www.agitare.com.br resolves), and the old
+    # certbot cert only ever covered www.agitare.com.br too. Deliberately
+    # NOT bundling them into one tls.domains/SAN request like a "real"
+    # single cert would — ACME validates every SAN independently, and one
+    # unreachable name (the apex) fails the whole certificate, breaking
+    # the working www hostname along with it. Leaving both routers on a
+    # bare certResolver (no explicit domains list) makes Traefik request
+    # an on-demand cert per actual SNI hostname instead — www succeeds
+    # independently, and the apex (which never had a valid cert anyway)
+    # just keeps falling back to Traefik's self-signed default.
     agitare-websecure:
       rule: "Host(`agitare.com.br`) || Host(`www.agitare.com.br`)"
       service: agitare
@@ -34,10 +45,6 @@ http:
         - websecure
       tls:
         certResolver: letsencrypt
-        domains:
-          - main: "agitare.com.br"
-            sans:
-              - "www.agitare.com.br"
     agitare-web:
       rule: "Host(`agitare.com.br`) || Host(`www.agitare.com.br`)"
       service: agitare
