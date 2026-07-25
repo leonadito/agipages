@@ -9,6 +9,11 @@ services:
     volumes:
       - sqlite_data:/data
       - media_data:/app/media
+      # tenants/traefik.py writes traefik/dynamic/tenants.yml relative to
+      # BASE_DIR (/app here) — without this bind mount that write lands
+      # inside the container's own throwaway layer, never reaching the
+      # host path the traefik service (below) actually reads from.
+      - ./traefik/dynamic:/app/traefik/dynamic
     ports:
       # Bound to localhost only — Traefik (network_mode: host, below)
       # reaches this exactly like the host's nginx used to, via loopback.
