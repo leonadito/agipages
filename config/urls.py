@@ -14,6 +14,7 @@ urlpatterns = [
     path("dashboard/leads/", include("leads.urls")),
     path("dashboard/telegram/", include("telegram_integration.urls")),
     path("dashboard/domain/", include("tenants.urls")),
+    path("dashboard/conversoes-meta/", include("meta_conversions.urls")),
     # Public endpoint Telegram's servers call directly — not behind login.
     path("telegram/", include((webhook_urlpatterns, "telegram_webhook"))),
     path("", TemplateView.as_view(template_name="base.html"), name="home"),

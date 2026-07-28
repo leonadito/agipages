@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A multi-tenant SaaS where real-estate agents/agencies build lead-capture landing pages for property launches via a structured form (no code/designer needed), then manage received leads in a dashboard with real-time Telegram notifications. Full spec in `PRD.md` (Portuguese) — read it for anything not covered here. `landing-page-exemplo.png` is the visual reference the public template follows; `diamond-infinity-towers/` holds real sample content used to seed a demo tenant.
 
-The MVP (all 7 milestones below) is implemented, plus some post-MVP additions on top (premium design variant, free-form HTML field, self-service custom-domain dashboard, production Traefik migration — see "Landing pages" and "Docker / Traefik" below). Commit history (`git log --oneline`) maps 1:1 to the milestones, then continues with the later additions, if you need the order things were built in.
+The MVP (all 7 milestones below) is implemented, plus some post-MVP additions on top (premium design variant, free-form HTML field, self-service custom-domain dashboard, production Traefik migration, server-side Meta Conversions API — see "Landing pages", "Docker / Traefik", and "Meta Conversions API" below). Commit history (`git log --oneline`) maps 1:1 to the milestones, then continues with the later additions, if you need the order things were built in.
 
 ## Commands
 
@@ -36,7 +36,7 @@ There is no Docker available in this local dev environment, so `docker build`/`d
 
 ## Architecture
 
-Flat app layout at repo root (no `apps/` wrapper): `config/` (settings package + urls), `tenants/`, `accounts/`, `core/`, `landingpages/`, `leads/`, `telegram_integration/`. Templates live under one root `templates/` dir (not per-app), mirroring app names (`templates/landingpages/`, `templates/leads/`, etc.), plus `templates/public/` for the public site and `templates/registration/` for auth.
+Flat app layout at repo root (no `apps/` wrapper): `config/` (settings package + urls), `tenants/`, `accounts/`, `core/`, `landingpages/`, `leads/`, `telegram_integration/`, `meta_conversions/`. Templates live under one root `templates/` dir (not per-app), mirroring app names (`templates/landingpages/`, `templates/leads/`, etc.), plus `templates/public/` for the public site and `templates/registration/` for auth.
 
 ### Multi-tenancy — the load-bearing design decision
 
@@ -62,9 +62,9 @@ The create/edit form (`templates/landingpages/form.html`) is a single real Djang
 
 ### Public site + leads (`landingpages/views.py::public_page`, `leads/`)
 
-Draft pages 404 on both URL forms — only `status=LandingPage.PUBLISHED` is ever served. UTM params (+`gclid`/`fbclid`) are read from the query string on GET and re-emitted as hidden inputs in the lead form, so they travel with the HTMX POST without needing session storage. Facebook Pixel / Google Ads snippets are injected per-landing-page (not per-tenant), only when that page's IDs are set. The lead form POSTs to `request.path` (the same URL) via `hx-post`/`hx-target`, swapping in either `public/partials/lead_form_success.html` or a re-rendered `lead_form.html` with errors — no page reload. Anti-spam is a honeypot field (`leads/forms.py::LeadCaptureForm.clean_website`) plus `django-ratelimit` (`method="POST"` only, so GET traffic from ads is never rate-limited).
+Draft pages 404 on both URL forms — only `status=LandingPage.PUBLISHED` is ever served. UTM params (+`gclid`/`fbclid`) are read from the query string on GET and re-emitted as hidden inputs in the lead form, so they travel with the HTMX POST without needing session storage. Facebook Pixel / Google Ads snippets are injected per-landing-page (not per-tenant), only when that page's IDs are set — this is deliberate (PRD §7.4): a tenant may run different campaigns, with different pixels, across different landing pages on the same domain. The lead form POSTs to `request.path` (the same URL) via `hx-post`/`hx-target`, swapping in either `public/partials/lead_form_success.html` or a re-rendered `lead_form.html` with errors — no page reload. Anti-spam is a honeypot field (`leads/forms.py::LeadCaptureForm.clean_website`) plus `django-ratelimit` (`method="POST"` only, so GET traffic from ads is never rate-limited). On successful POST, `_fbp`/`_fbc` cookies are read off the request and denormalized onto the `Lead` row (`Lead.fbp`/`Lead.fbc`) — same "capture from request at save time" pattern already used for `ip_address`/`user_agent` — for `meta_conversions/` to use later.
 
-`Lead` creation fires a `post_save` signal — but the receiver lives in `telegram_integration/signals.py`, not in `leads/`, connected via `telegram_integration/apps.py::ready()`. This keeps `leads` decoupled from the notification mechanism entirely.
+`Lead` creation fires a `post_save` signal — but the receivers live in `telegram_integration/signals.py` and `meta_conversions/signals.py`, not in `leads/`, each connected via their own `apps.py::ready()`. This keeps `leads` decoupled from both notification/tracking mechanisms entirely.
 
 ### Leads dashboard (`leads/`)
 
@@ -75,6 +75,16 @@ Draft pages 404 on both URL forms — only `status=LandingPage.PUBLISHED` is eve
 Linking a tenant's Telegram chat requires an inbound webhook (Telegram never exposes a user's `chat_id` any other way) — `TelegramWebhookView` at `/telegram/webhook/<secret>/`, where `<secret>` is compared against `TELEGRAM_WEBHOOK_SECRET` since Telegram doesn't sign requests. The dashboard generates a short-lived `TelegramLinkCode` and shows a `t.me/<bot>?start=<code>` deep link; tapping it sends `/start <code>` to the bot, which the webhook exchanges for an activated `TelegramIntegration(chat_id=...)`. `telegram_integration/services.py::send_telegram_message` wraps the actual HTTP call in `try/except` with a short timeout — a Telegram failure must never surface to the visitor who just submitted the public lead form, since the `Lead` is already committed before this runs (PRD §7.7). This is proven directly in `telegram_integration/tests.py` by mocking `requests.post` to raise `Timeout` and asserting the `Lead` still gets created.
 
 Real end-to-end testing (actual bot + public webhook URL) needs a public HTTPS endpoint — Telegram's servers can't reach `127.0.0.1`. This wasn't exercised against production; do it against the real deployed domain (see Docker/Traefik below) rather than fighting with a tunnel tool locally.
+
+### Meta Conversions API (`meta_conversions/`)
+
+Server-side counterpart to the browser Facebook Pixel (see "Public site + leads" above). `LandingPage.facebook_pixel_id` stays exactly where it was — per landing page, per PRD §7.4 — but the Conversions API **access token** lives one level up, on `meta_conversions.MetaConversionSettings` (one per tenant, `OneToOneField(Tenant)`, own app/model/migration — same shape as `TelegramIntegration`, deliberately not fields bolted onto `tenants.Tenant`). This isn't a reversal of the per-landing-page pixel decision: Meta issues Conversions API tokens as "system user" credentials scoped to a Business Manager account, which already cover every pixel that account owns, so one token per tenant is the correct grain regardless of how many pixels that tenant's landing pages use.
+
+Only the `Lead` event is sent server-side (`meta_conversions/signals.py`, `post_save(Lead)` → `meta_conversions/services.py::send_lead_conversion_event`) — **not** `PageView`. `PageView` would need a synchronous HTTP call on every public GET request (not just the rarer POST-a-lead path), and there's no async task queue in this project to keep that off the request/response cycle; the browser Pixel already covers `PageView` for free. `send_lead_conversion_event` follows the exact same silent-failure contract as `telegram_integration/services.py::send_telegram_message` (short timeout, `try/except requests.RequestException`, never raises) — a Conversions API outage must never surface to the visitor who just submitted the lead form.
+
+Meta requires PII (`email`, `phone`, `city`) SHA256-hashed before it leaves the server — never sent in the clear. Phone hashing assumes Brazilian numbers: digits only, and a bare 10-11 digit number (no country code) gets `55` prefixed before hashing — documented assumption, not configurable. **Deduplication**: the browser Pixel's `fbq('track', 'Lead', {}, {eventID: ...})` call (`templates/public/partials/lead_form_success.html`) and the server-side `event_id` in `send_lead_conversion_event` both use `str(lead.pk)` — without this exact match, Meta counts every lead as two conversions instead of one.
+
+Dashboard screen at `dashboard/conversoes-meta/` (`meta_conversions/views.py::MetaConversionSettingsView`, template `templates/meta_conversions/settings.html`) lets a tenant paste their access token and an optional `test_event_code` (Meta Events Manager's "Test Events" tool) — same `TenantDashboardMixin` + PRG pattern as `tenants/views.py::DomainSettingsView`.
 
 ### Docker / Traefik / custom domains
 

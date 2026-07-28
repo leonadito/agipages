@@ -41,6 +41,11 @@ class Lead(models.Model):
 
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=500, blank=True)
+    # Meta Pixel's own first-party cookies, captured server-side for the
+    # Conversions API (meta_conversions/services.py) — improves Meta's
+    # match quality between the browser and server "Lead" events.
+    fbp = models.CharField(max_length=255, blank=True)
+    fbc = models.CharField(max_length=255, blank=True)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=NEW)
 

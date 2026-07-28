@@ -185,11 +185,13 @@ def public_page(request, page_slug, tenant_slug=None):
                 setattr(lead, key, request.POST.get(key, ""))
             lead.ip_address = request.META.get("REMOTE_ADDR")
             lead.user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
+            lead.fbp = request.COOKIES.get("_fbp", "")
+            lead.fbc = request.COOKIES.get("_fbc", "")
             lead.save()
             return render(
                 request,
                 "public/partials/lead_form_success.html",
-                {"landing_page": landing_page},
+                {"landing_page": landing_page, "lead": lead},
             )
         return render(
             request,

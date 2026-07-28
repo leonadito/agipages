@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "landingpages",
     "leads",
     "telegram_integration",
+    "meta_conversions",
 ]
 
 MIDDLEWARE = [

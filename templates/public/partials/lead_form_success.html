@@ -2,7 +2,7 @@
     <p class="font-medium text-green-800">Recebemos seus dados! Em breve um consultor entrará em contato.</p>
 </div>
 {% if landing_page.facebook_pixel_id %}
-<script>if (window.fbq) { fbq('track', 'Lead'); }</script>
+<script>if (window.fbq) { fbq('track', 'Lead', {}, {eventID: '{{ lead.id }}'}); }</script>
 {% endif %}
 {% if landing_page.google_ads_id %}
 <script>if (window.gtag) { gtag('event', 'conversion', {'send_to': '{{ landing_page.google_ads_id }}'}); }</script>
