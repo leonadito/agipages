@@ -77,6 +77,23 @@ http:
       entryPoints:
         - web
 
+    # Provisional demo URL for the AICITI site (real domain aiciti.com.br
+    # will point here later). Self-serves /static/ and /media/ from its own
+    # container (WhiteNoise + django.views.static.serve respectively), so
+    # unlike agipages/albertokappel it needs no internal-static routes.
+    aiciti-websecure:
+      rule: "Host(`aiciti.agitare.com.br`)"
+      service: aiciti
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+    aiciti-web:
+      rule: "Host(`aiciti.agitare.com.br`)"
+      service: aiciti
+      entryPoints:
+        - web
+
     # www.albertokappel.com.br only ever redirects to the apex (set up
     # manually when this tenant was onboarded). Tenant.custom_domain has
     # no "www variant" concept, so the apex itself gets its router from
@@ -193,6 +210,10 @@ http:
       loadBalancer:
         servers:
           - url: "http://127.0.0.1:8000"
+    aiciti:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8003"
     internal-static:
       loadBalancer:
         servers:
