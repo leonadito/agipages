@@ -12,9 +12,9 @@ services:
       # tenants/traefik.py writes traefik/dynamic/tenants.yml relative to
       # BASE_DIR (/app here) — without this bind mount that write lands
       # inside the container's own throwaway layer, never reaching the
-      # host path the standalone Traefik service (own compose project at
+      # host path the standalone Traefik service (own project/repo at
       # /var/www/traefik/, see its docker-compose.yml) actually reads from.
-      - ./traefik/dynamic:/app/traefik/dynamic
+      - /var/www/traefik/dynamic:/app/traefik/dynamic
     ports:
       # Bound to localhost only — Traefik (separate compose project at
       # /var/www/traefik/, network_mode: host) reaches this exactly like
