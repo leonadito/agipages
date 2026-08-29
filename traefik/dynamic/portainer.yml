@@ -1,4 +1,10 @@
 http:
+  middlewares:
+    portainer-auth:
+      basicAuth:
+        users:
+          - "leonadito:$2y$05$jVJxe1suWqyDX7mEgKpkmegCj3n5ryqpvKP0PUU0rBGefq53I/d9q"
+
   routers:
     portainer-websecure:
       rule: "Host(`portainer.agitare.com.br`)"
@@ -7,11 +13,15 @@ http:
         - websecure
       tls:
         certResolver: letsencrypt
+      middlewares:
+        - portainer-auth
     portainer-web:
       rule: "Host(`portainer.agitare.com.br`)"
       service: portainer
       entryPoints:
         - web
+      middlewares:
+        - portainer-auth
 
   services:
     portainer:
