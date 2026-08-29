@@ -1,0 +1,20 @@
+http:
+  routers:
+    portainer-websecure:
+      rule: "Host(`portainer.agitare.com.br`)"
+      service: portainer
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+    portainer-web:
+      rule: "Host(`portainer.agitare.com.br`)"
+      service: portainer
+      entryPoints:
+        - web
+
+  services:
+    portainer:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:9000"
