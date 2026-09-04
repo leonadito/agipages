@@ -15,6 +15,39 @@
         {% include "landingpages/partials/field.html" with field=form.title %}
         {% include "landingpages/partials/field.html" with field=form.design_variant %}
 
+        {# Campos de contato, campos extras e rastreamento valem para as
+           três variantes (inclusive "custom", onde {{LEAD_FORM}} e
+           {{TRACKING_SCRIPTS}} usam exatamente esta configuração) — por
+           isso ficam sempre visíveis, fora do bloco que alterna entre as
+           abas estruturadas e o HTML personalizado. #}
+        <div class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">Formulário de captura — campos</h2>
+            <p class="text-sm text-gray-500">Nome e cidade são sempre exigidos. E-mail e telefone podem ser desligados ou tornados opcionais, e você pode adicionar campos extras de qualificação (seleção, texto, etc). Vale para as três variantes de design.</p>
+
+            <h3 class="font-medium text-gray-800 pt-2">Contato</h3>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.show_email }} {{ form.show_email.label }}</label>
+                    <label class="mt-1 flex items-center gap-2 text-sm text-gray-700">{{ form.require_email }} {{ form.require_email.label }}</label>
+                </div>
+                <div>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.show_phone }} {{ form.show_phone.label }}</label>
+                    <label class="mt-1 flex items-center gap-2 text-sm text-gray-700">{{ form.require_phone }} {{ form.require_phone.label }}</label>
+                </div>
+            </div>
+            {% include "landingpages/partials/field.html" with field=form.phone_label %}
+
+            <h3 class="font-medium text-gray-800 pt-2">Campos extras</h3>
+            {% include "landingpages/partials/form_field_formset.html" %}
+        </div>
+
+        <div class="space-y-4 rounded-md border border-gray-200 p-4">
+            <h2 class="font-medium text-gray-800">Rastreamento</h2>
+            <p class="text-sm text-gray-500">Vale para as três variantes de design.</p>
+            {% include "landingpages/partials/field.html" with field=form.facebook_pixel_id %}
+            {% include "landingpages/partials/field.html" with field=form.google_ads_id %}
+        </div>
+
         <div x-show="variant === 'custom'" class="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-4">
             <h2 class="font-medium text-gray-800">HTML personalizado (avançado)</h2>
             {% include "landingpages/partials/field.html" with field=form.custom_html %}
@@ -81,28 +114,12 @@
         </div>
 
         <div x-show="tab===6" class="space-y-4 rounded-md border border-gray-200 p-4">
-            <h2 class="font-medium text-gray-800">6. Formulário de captura</h2>
-            <p class="text-sm text-gray-500">Nome e cidade são sempre exigidos. E-mail e telefone podem ser desligados ou tornados opcionais, e você pode adicionar campos extras de qualificação (seleção, texto, etc).</p>
+            <h2 class="font-medium text-gray-800">6. Formulário de captura — apresentação</h2>
+            <p class="text-sm text-gray-500">Título, texto de apoio e estilo do botão. Usado pelos designs Padrão e Premium (a variante HTML personalizado define isso no próprio HTML). Os campos do formulário em si ficam na seção "Formulário de captura — campos", acima.</p>
             {% include "landingpages/partials/field.html" with field=form.lead_form_heading %}
             {% include "landingpages/partials/field.html" with field=form.lead_form_description %}
             {% include "landingpages/partials/field.html" with field=form.lead_form_button_text %}
             {% include "landingpages/partials/field.html" with field=form.lead_form_button_color %}
-
-            <h3 class="font-medium text-gray-800 pt-2">Contato</h3>
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                    <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.show_email }} {{ form.show_email.label }}</label>
-                    <label class="mt-1 flex items-center gap-2 text-sm text-gray-700">{{ form.require_email }} {{ form.require_email.label }}</label>
-                </div>
-                <div>
-                    <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.show_phone }} {{ form.show_phone.label }}</label>
-                    <label class="mt-1 flex items-center gap-2 text-sm text-gray-700">{{ form.require_phone }} {{ form.require_phone.label }}</label>
-                </div>
-            </div>
-            {% include "landingpages/partials/field.html" with field=form.phone_label %}
-
-            <h3 class="font-medium text-gray-800 pt-2">Campos extras</h3>
-            {% include "landingpages/partials/form_field_formset.html" %}
         </div>
 
         <div x-show="tab===7" class="space-y-4 rounded-md border border-gray-200 p-4">
@@ -139,9 +156,6 @@
             <h2 class="font-medium text-gray-800">12. CTA final + rodapé</h2>
             {% include "landingpages/partials/field.html" with field=form.final_cta_text %}
             {% include "landingpages/partials/field.html" with field=form.footer_text %}
-            <h3 class="font-medium text-gray-800 pt-2">Rastreamento (por landing page)</h3>
-            {% include "landingpages/partials/field.html" with field=form.facebook_pixel_id %}
-            {% include "landingpages/partials/field.html" with field=form.google_ads_id %}
         </div>
         </div>
 
