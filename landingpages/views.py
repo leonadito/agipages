@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from django.contrib import messages
 from django.db import transaction
 from django.http import HttpResponse
@@ -218,7 +220,11 @@ def public_page(request, page_slug, tenant_slug=None):
             return render(
                 request,
                 "public/partials/lead_form_success.html",
-                {"landing_page": landing_page, "lead": lead},
+                {
+                    "landing_page": landing_page,
+                    "lead": lead,
+                    "whatsapp_url": _whatsapp_redirect_url(landing_page, lead),
+                },
             )
         return render(
             request,
@@ -276,3 +282,16 @@ def _extra_fields(landing_page, form):
         (form_field, form[extra_field_name(form_field.field_key)])
         for form_field in landing_page.form_fields.all()
     ]
+
+
+def _whatsapp_redirect_url(landing_page, lead):
+    """Monta a URL do wa.me para redirecionar o visitante logo após o envio
+    bem-sucedido, quando a página tem um número configurado. O primeiro
+    nome do lead é anexado à mensagem, como no fluxo que substitui."""
+    if not landing_page.whatsapp_redirect_number:
+        return ""
+    first_name = lead.name.strip().split(" ")[0] if lead.name.strip() else ""
+    message = landing_page.whatsapp_redirect_message or ""
+    if first_name:
+        message = f"{message} Meu nome é {first_name}.".strip()
+    return f"https://wa.me/{landing_page.whatsapp_redirect_number}?text={quote(message)}"

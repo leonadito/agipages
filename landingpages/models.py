@@ -127,6 +127,21 @@ class LandingPage(models.Model):
         blank=True,
         default="Telefone",
     )
+    # Opcional: além de salvar o Lead normalmente (dashboard/Telegram/Meta
+    # Conversions), redireciona o visitante para o WhatsApp logo após o
+    # envio bem-sucedido — fluxo comum em landing pages de corretores que
+    # já usam WhatsApp como canal principal de atendimento.
+    whatsapp_redirect_number = models.CharField(
+        "Número do WhatsApp para redirecionamento (DDI+DDD+número, só dígitos)",
+        max_length=20,
+        blank=True,
+    )
+    whatsapp_redirect_message = models.CharField(
+        "Mensagem pré-preenchida do WhatsApp",
+        max_length=500,
+        blank=True,
+        help_text="O primeiro nome do lead é adicionado automaticamente ao final.",
+    )
 
     # 6. Vídeo institucional
     video_section_title = models.CharField(

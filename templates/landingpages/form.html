@@ -39,6 +39,11 @@
 
             <h3 class="font-medium text-gray-800 pt-2">Campos extras</h3>
             {% include "landingpages/partials/form_field_formset.html" %}
+
+            <h3 class="font-medium text-gray-800 pt-2">Redirecionamento para WhatsApp (opcional)</h3>
+            <p class="text-sm text-gray-500">Se preenchido, além de salvar o lead normalmente, o visitante é levado ao WhatsApp logo após enviar o formulário.</p>
+            {% include "landingpages/partials/field.html" with field=form.whatsapp_redirect_number %}
+            {% include "landingpages/partials/field.html" with field=form.whatsapp_redirect_message %}
         </div>
 
         <div class="space-y-4 rounded-md border border-gray-200 p-4">

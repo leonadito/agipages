@@ -7,3 +7,6 @@
 {% if landing_page.google_ads_id %}
 <script>if (window.gtag) { gtag('event', 'conversion', {'send_to': '{{ landing_page.google_ads_id }}'}); }</script>
 {% endif %}
+{% if whatsapp_url %}
+<script>setTimeout(function(){ window.location.href = '{{ whatsapp_url|escapejs }}'; }, 600);</script>
+{% endif %}

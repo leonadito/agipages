@@ -245,6 +245,40 @@ class PublicPageTests(TestCase):
         self.assertEqual(lead.tenant, self.tenant)
         self.assertEqual(lead.landing_page, self.published_page)
 
+    def test_whatsapp_redirect_url_rendered_on_success_when_configured(self):
+        self.published_page.whatsapp_redirect_number = "5551999999999"
+        self.published_page.whatsapp_redirect_message = "Oi! Quero saber mais."
+        self.published_page.save()
+        url = self._public_url(self.tenant, self.published_page)
+        response = self.client.post(
+            url,
+            {
+                "name": "Maria Silva",
+                "email": "maria2@example.com",
+                "phone": "51999999999",
+                "city": "Torres",
+                "website": "",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        self.assertIn("wa.me/5551999999999", content)
+        self.assertIn("Meu%20nome%20%C3%A9%20Maria", content)
+
+    def test_no_whatsapp_redirect_script_when_not_configured(self):
+        url = self._public_url(self.tenant, self.published_page)
+        response = self.client.post(
+            url,
+            {
+                "name": "Maria",
+                "email": "maria3@example.com",
+                "phone": "51999999999",
+                "city": "Torres",
+                "website": "",
+            },
+        )
+        self.assertNotContains(response, "wa.me/")
+
     def test_honeypot_filled_does_not_create_lead(self):
         url = self._public_url(self.tenant, self.published_page)
         response = self.client.post(
