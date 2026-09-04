@@ -1,0 +1,52 @@
+<div class="space-y-4">
+    {{ form_field_formset.management_form }}
+    {% for field_form in form_field_formset %}
+    <div class="rounded-md border border-gray-200 p-4"
+         x-data="{ fieldType: '{{ field_form.field_type.value|default:'text' }}' }">
+        {{ field_form.id }}
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field_form.field_key.id_for_label }}">Identificador do campo</label>
+                {{ field_form.field_key }}
+                {% for error in field_form.field_key.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field_form.label.id_for_label }}">Rótulo exibido</label>
+                {{ field_form.label }}
+                {% for error in field_form.label.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field_form.field_type.id_for_label }}">Tipo de campo</label>
+                <select name="{{ field_form.field_type.html_name }}" id="{{ field_form.field_type.id_for_label }}" x-model="fieldType">
+                    {% for value, label in field_form.fields.field_type.choices %}
+                    <option value="{{ value }}" {% if value == field_form.field_type.value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="mt-6 flex items-center gap-2 text-sm text-gray-700">
+                    {{ field_form.required }} Obrigatório
+                </label>
+            </div>
+            <div class="sm:col-span-2" x-show="fieldType === 'select' || fieldType === 'radio'">
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ field_form.options_text.id_for_label }}">Opções (uma por linha)</label>
+                {{ field_form.options_text }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Ordem</label>
+                <div class="flex items-center gap-1" x-data="{ order: {{ field_form.order.value|default:0 }} }">
+                    <button type="button" @click="order = Math.max(0, order - 1)" class="rounded bg-gray-100 px-2 py-1 hover:bg-gray-200">↑</button>
+                    <input type="number" name="{{ field_form.order.html_name }}" id="{{ field_form.order.id_for_label }}"
+                           x-model="order" class="w-16 text-center">
+                    <button type="button" @click="order = order + 1" class="rounded bg-gray-100 px-2 py-1 hover:bg-gray-200">↓</button>
+                </div>
+            </div>
+        </div>
+        {% if field_form.instance.pk %}
+        <label class="mt-3 flex items-center gap-2 text-sm text-red-600">
+            {{ field_form.DELETE }} Remover este campo
+        </label>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>

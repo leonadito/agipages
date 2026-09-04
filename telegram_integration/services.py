@@ -47,12 +47,16 @@ def notify_new_lead(lead):
         return False
 
     lead_url = f"{settings.SITE_URL.rstrip('/')}/dashboard/leads/{lead.pk}/"
+    extra_lines = "".join(
+        f"{key}: {value}\n" for key, value in (lead.extra_field_values or {}).items()
+    )
     text = (
         f"<b>Novo lead em {lead.landing_page.title}</b>\n"
         f"Nome: {lead.name}\n"
         f"Email: {lead.email}\n"
         f"Telefone: {lead.phone}\n"
-        f"Cidade: {lead.city}\n\n"
+        f"Cidade: {lead.city}\n"
+        f"{extra_lines}\n"
         f"{lead_url}"
     )
     return send_telegram_message(integration.chat_id, text)

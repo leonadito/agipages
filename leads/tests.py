@@ -134,6 +134,25 @@ class LeadDashboardTests(TestCase):
         self.assertNotIn("Lead A2", content)
         self.assertNotIn("Lead B", content)
 
+    def test_csv_export_includes_extra_fields_column(self):
+        self.lead_a1.extra_field_values = {"interesse": "Compra"}
+        self.lead_a1.save()
+        self.client.force_login(self.user_a)
+        response = self.client.get(reverse("leads:export"))
+        content = b"".join(response.streaming_content).decode("utf-8")
+        self.assertIn("Campos Extras", content)
+        self.assertIn("interesse: Compra", content)
+
+    def test_detail_view_renders_extra_field_values(self):
+        self.lead_a1.extra_field_values = {"interesse": "Compra"}
+        self.lead_a1.save()
+        self.client.force_login(self.user_a)
+        response = self.client.get(
+            reverse("leads:detail", kwargs={"pk": self.lead_a1.pk})
+        )
+        self.assertContains(response, "interesse")
+        self.assertContains(response, "Compra")
+
     def test_inline_status_update_writes_history(self):
         self.client.force_login(self.user_a)
         response = self.client.post(

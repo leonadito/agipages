@@ -1,6 +1,8 @@
 from django.contrib import messages
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
@@ -8,10 +10,17 @@ from django.views.generic import CreateView, ListView, UpdateView
 from django_ratelimit.decorators import ratelimit
 
 from core.mixins import TenantDashboardMixin
-from leads.forms import LeadCaptureForm
+from leads.forms import build_lead_capture_form, extra_field_name, extract_extra_field_values
+from leads.models import Lead
 from tenants.models import Tenant
 
-from .forms import AmenityFormSet, GalleryImageFormSet, LandingPageForm, get_publish_errors
+from .forms import (
+    AmenityFormSet,
+    FormFieldFormSet,
+    GalleryImageFormSet,
+    LandingPageForm,
+    get_publish_errors,
+)
 from .models import LandingPage, LandingPageAuditLog
 
 
@@ -56,16 +65,25 @@ class LandingPageFormViewMixin:
             context["amenity_formset"] = AmenityFormSet(
                 self.request.POST, instance=self.object
             )
+            context["form_field_formset"] = FormFieldFormSet(
+                self.request.POST, instance=self.object
+            )
         else:
             context["gallery_formset"] = GalleryImageFormSet(instance=self.object)
             context["amenity_formset"] = AmenityFormSet(instance=self.object)
+            context["form_field_formset"] = FormFieldFormSet(instance=self.object)
         return context
 
     def form_valid(self, form):
         context = self.get_context_data()
         gallery_formset = context["gallery_formset"]
         amenity_formset = context["amenity_formset"]
-        if not gallery_formset.is_valid() or not amenity_formset.is_valid():
+        form_field_formset = context["form_field_formset"]
+        if (
+            not gallery_formset.is_valid()
+            or not amenity_formset.is_valid()
+            or not form_field_formset.is_valid()
+        ):
             return self.render_to_response(self.get_context_data(form=form))
 
         with transaction.atomic():
@@ -83,6 +101,9 @@ class LandingPageFormViewMixin:
 
             amenity_formset.instance = landing_page
             amenity_formset.save()
+
+            form_field_formset.instance = landing_page
+            form_field_formset.save()
 
             LandingPageAuditLog.objects.create(
                 landing_page=landing_page,
@@ -176,11 +197,17 @@ def public_page(request, page_slug, tenant_slug=None):
     tracking = {key: request.GET.get(key, "") for key in UTM_PARAMS}
 
     if request.method == "POST":
-        form = LeadCaptureForm(request.POST)
+        form = build_lead_capture_form(landing_page, data=request.POST)
         if form.is_valid():
-            lead = form.save(commit=False)
-            lead.tenant = tenant
-            lead.landing_page = landing_page
+            lead = Lead(
+                tenant=tenant,
+                landing_page=landing_page,
+                name=form.cleaned_data["name"],
+                email=form.cleaned_data.get("email", ""),
+                phone=form.cleaned_data.get("phone", ""),
+                city=form.cleaned_data["city"],
+                extra_field_values=extract_extra_field_values(landing_page, form.cleaned_data),
+            )
             for key in UTM_PARAMS:
                 setattr(lead, key, request.POST.get(key, ""))
             lead.ip_address = request.META.get("REMOTE_ADDR")
@@ -196,23 +223,56 @@ def public_page(request, page_slug, tenant_slug=None):
         return render(
             request,
             "public/partials/lead_form.html",
-            {"landing_page": landing_page, "form": form, "tracking": tracking},
+            {
+                "landing_page": landing_page,
+                "form": form,
+                "tracking": tracking,
+                "extra_fields": _extra_fields(landing_page, form),
+            },
             status=400,
         )
 
-    form = LeadCaptureForm()
+    form = build_lead_capture_form(landing_page)
+    context = {
+        "landing_page": landing_page,
+        "tenant": tenant,
+        "form": form,
+        "tracking": tracking,
+        "extra_fields": _extra_fields(landing_page, form),
+    }
+
+    if landing_page.design_variant == LandingPage.CUSTOM:
+        return HttpResponse(_render_custom_page(request, landing_page, context))
+
     template_name = (
         "public/landing_page_premium.html"
         if landing_page.design_variant == LandingPage.PREMIUM
         else "public/landing_page.html"
     )
-    return render(
-        request,
-        template_name,
-        {
-            "landing_page": landing_page,
-            "tenant": tenant,
-            "form": form,
-            "tracking": tracking,
-        },
+    return render(request, template_name, context)
+
+
+def _render_custom_page(request, landing_page, context):
+    """Injeta o formulário de captura e os scripts de tracking no HTML
+    fornecido pelo tenant via substituição literal de string — NUNCA passar
+    landing_page.custom_html pelo motor de templates do Django
+    (Template(...).render()), pois isso permitiria que HTML de tenant usasse
+    {% load %}/{{ settings... }} para ler configuração do servidor (Server-
+    Side Template Injection). str.replace() em tokens fixos não executa
+    nada, só troca texto."""
+    lead_form_html = render_to_string("public/partials/lead_form.html", context, request=request)
+    tracking_html = render_to_string(
+        "public/partials/tracking_scripts.html", {"landing_page": landing_page}
     )
+    html = landing_page.custom_html.replace("{{LEAD_FORM}}", lead_form_html)
+    html = html.replace("{{TRACKING_SCRIPTS}}", tracking_html)
+    return html
+
+
+def _extra_fields(landing_page, form):
+    """Pareia cada LandingPageFormField com seu BoundField no form dinâmico,
+    para o template só iterar e renderizar, sem lógica de nomes de campo."""
+    return [
+        (form_field, form[extra_field_name(form_field.field_key)])
+        for form_field in landing_page.form_fields.all()
+    ]

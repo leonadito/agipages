@@ -31,10 +31,14 @@ CSV_HEADER = [
     "UTM Medium",
     "UTM Campaign",
     "Criado em",
+    "Campos Extras",
 ]
 
 
 def _lead_csv_row(lead):
+    extra = "; ".join(
+        f"{key}: {value}" for key, value in (lead.extra_field_values or {}).items()
+    )
     return [
         lead.name,
         lead.email,
@@ -46,6 +50,7 @@ def _lead_csv_row(lead):
         lead.utm_medium,
         lead.utm_campaign,
         lead.created_at.strftime("%Y-%m-%d %H:%M"),
+        extra,
     ]
 
 

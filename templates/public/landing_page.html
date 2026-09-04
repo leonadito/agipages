@@ -2,26 +2,7 @@
 {% block title %}{{ landing_page.title }}{% endblock %}
 
 {% block extra_head %}
-{% if landing_page.facebook_pixel_id %}
-<script>
-!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
-document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '{{ landing_page.facebook_pixel_id }}');
-fbq('track', 'PageView');
-</script>
-{% endif %}
-{% if landing_page.google_ads_id %}
-<script async src="https://www.googletagmanager.com/gtag/js?id={{ landing_page.google_ads_id }}"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', '{{ landing_page.google_ads_id }}');
-</script>
-{% endif %}
+{% include "public/partials/tracking_scripts.html" %}
 {% endblock %}
 
 {% block content %}

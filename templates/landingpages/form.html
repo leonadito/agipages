@@ -1,19 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{% if object %}Editar{% else %}Nova{% endif %} landing page{% endblock %}
 {% block content %}
-<div class="mx-auto max-w-4xl px-4 py-10" x-data="{ tab: 1 }">
+<div class="mx-auto max-w-4xl px-4 py-10"
+     x-data="{ tab: 1, variant: '{{ object.design_variant|default:'standard' }}' }">
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-semibold">{% if object %}Editar{% else %}Nova{% endif %} landing page</h1>
         <a href="{% url 'landingpages:list' %}" class="text-sm text-blue-600 underline">Voltar para a lista</a>
     </div>
-
-    <nav class="flex flex-wrap gap-2 mb-6">
-        {% for n, label in section_tabs %}
-        <button type="button" @click="tab={{ n }}"
-                :class="tab==={{ n }} ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                class="rounded-md px-3 py-1.5 text-sm font-medium">{{ n }}. {{ label }}</button>
-        {% endfor %}
-    </nav>
 
     <form method="post" enctype="multipart/form-data" class="space-y-6">
         {% csrf_token %}
@@ -21,6 +14,29 @@
 
         {% include "landingpages/partials/field.html" with field=form.title %}
         {% include "landingpages/partials/field.html" with field=form.design_variant %}
+
+        <div x-show="variant === 'custom'" class="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-4">
+            <h2 class="font-medium text-gray-800">HTML personalizado (avançado)</h2>
+            {% include "landingpages/partials/field.html" with field=form.custom_html %}
+            <p class="text-xs text-amber-700">
+                Insira os tokens
+                <code>{% templatetag openbrace %}{% templatetag openbrace %}LEAD_FORM{% templatetag closebrace %}{% templatetag closebrace %}</code>
+                e
+                <code>{% templatetag openbrace %}{% templatetag openbrace %}TRACKING_SCRIPTS{% templatetag closebrace %}{% templatetag closebrace %}</code>
+                onde o formulário de captura e os scripts de Pixel/Google Ads devem aparecer. Não crie no seu
+                HTML um elemento com <code>id="lead-form-wrapper"</code> — esse id já vem de dentro do formulário
+                injetado no lugar do token.
+            </p>
+        </div>
+
+        <div x-show="variant !== 'custom'">
+            <nav class="flex flex-wrap gap-2 mb-6">
+                {% for n, label in section_tabs %}
+                <button type="button" @click="tab={{ n }}"
+                        :class="tab==={{ n }} ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                        class="rounded-md px-3 py-1.5 text-sm font-medium">{{ n }}. {{ label }}</button>
+                {% endfor %}
+            </nav>
 
         <div x-show="tab===1" class="space-y-4 rounded-md border border-gray-200 p-4">
             <h2 class="font-medium text-gray-800">1. Hero</h2>
@@ -66,11 +82,27 @@
 
         <div x-show="tab===6" class="space-y-4 rounded-md border border-gray-200 p-4">
             <h2 class="font-medium text-gray-800">6. Formulário de captura</h2>
-            <p class="text-sm text-gray-500">Os campos do formulário em si (nome, e-mail, telefone, cidade) são fixos no MVP — aqui você edita só a apresentação.</p>
+            <p class="text-sm text-gray-500">Nome e cidade são sempre exigidos. E-mail e telefone podem ser desligados ou tornados opcionais, e você pode adicionar campos extras de qualificação (seleção, texto, etc).</p>
             {% include "landingpages/partials/field.html" with field=form.lead_form_heading %}
             {% include "landingpages/partials/field.html" with field=form.lead_form_description %}
             {% include "landingpages/partials/field.html" with field=form.lead_form_button_text %}
             {% include "landingpages/partials/field.html" with field=form.lead_form_button_color %}
+
+            <h3 class="font-medium text-gray-800 pt-2">Contato</h3>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.show_email }} {{ form.show_email.label }}</label>
+                    <label class="mt-1 flex items-center gap-2 text-sm text-gray-700">{{ form.require_email }} {{ form.require_email.label }}</label>
+                </div>
+                <div>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.show_phone }} {{ form.show_phone.label }}</label>
+                    <label class="mt-1 flex items-center gap-2 text-sm text-gray-700">{{ form.require_phone }} {{ form.require_phone.label }}</label>
+                </div>
+            </div>
+            {% include "landingpages/partials/field.html" with field=form.phone_label %}
+
+            <h3 class="font-medium text-gray-800 pt-2">Campos extras</h3>
+            {% include "landingpages/partials/form_field_formset.html" %}
         </div>
 
         <div x-show="tab===7" class="space-y-4 rounded-md border border-gray-200 p-4">
@@ -110,6 +142,7 @@
             <h3 class="font-medium text-gray-800 pt-2">Rastreamento (por landing page)</h3>
             {% include "landingpages/partials/field.html" with field=form.facebook_pixel_id %}
             {% include "landingpages/partials/field.html" with field=form.google_ads_id %}
+        </div>
         </div>
 
         <div class="flex items-center gap-3 pt-4">

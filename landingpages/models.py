@@ -13,9 +13,11 @@ class LandingPage(models.Model):
 
     STANDARD = "standard"
     PREMIUM = "premium"
+    CUSTOM = "custom"
     DESIGN_VARIANT_CHOICES = [
         (STANDARD, "Padrão"),
         (PREMIUM, "Premium (design autoral, alto padrão)"),
+        (CUSTOM, "HTML personalizado (avançado)"),
     ]
 
     tenant = models.ForeignKey(
@@ -33,6 +35,16 @@ class LandingPage(models.Model):
         max_length=20,
         choices=DESIGN_VARIANT_CHOICES,
         default=STANDARD,
+    )
+    # Usado só pela variante "custom": HTML completo da página, fornecido
+    # pelo tenant, renderizado sem alterações (mesmo modelo de confiança de
+    # financial_conditions_html — só o dono autenticado do tenant escreve
+    # aqui). A substituição dos tokens {{LEAD_FORM}}/{{TRACKING_SCRIPTS}} é
+    # feita com str.replace() literal em landingpages/views.py::public_page,
+    # nunca pelo motor de templates do Django — rodar conteúdo de tenant
+    # através do Template Engine abriria Server-Side Template Injection.
+    custom_html = models.TextField(
+        "HTML personalizado da página (avançado)", blank=True
     )
 
     # 1. Hero
@@ -79,7 +91,7 @@ class LandingPage(models.Model):
         "Conteúdo HTML personalizado (opcional)", blank=True
     )
 
-    # 5. Formulário de captura (apresentação — campos do form em si são fixos)
+    # 5. Formulário de captura (apresentação + configuração dos campos)
     lead_form_heading = models.CharField(
         "Título do formulário",
         max_length=255,
@@ -97,6 +109,23 @@ class LandingPage(models.Model):
     )
     lead_form_button_color = models.CharField(
         "Cor do botão de envio", max_length=20, blank=True, default="#2563eb"
+    )
+    # Nome e cidade são sempre fixos e obrigatórios; e-mail e telefone podem
+    # ser desligados/tornados opcionais por página (ex: cliente que só quer
+    # WhatsApp, sem e-mail). Campos extras ficam em LandingPageFormField.
+    show_email = models.BooleanField("Exibir campo de e-mail", default=True)
+    require_email = models.BooleanField("E-mail obrigatório", default=True)
+    show_phone = models.BooleanField(
+        "Exibir campo de telefone/WhatsApp", default=True
+    )
+    require_phone = models.BooleanField(
+        "Telefone/WhatsApp obrigatório", default=True
+    )
+    phone_label = models.CharField(
+        "Rótulo do campo de telefone",
+        max_length=50,
+        blank=True,
+        default="Telefone",
     )
 
     # 6. Vídeo institucional
@@ -249,6 +278,66 @@ class LandingPageAmenity(models.Model):
 
     def __str__(self):
         return f"{self.landing_page.title} — {self.title}"
+
+
+class LandingPageFormField(models.Model):
+    """Campos extras e configuráveis do formulário de captura, além dos
+    campos fixos nome/cidade e dos campos opcionais e-mail/telefone
+    (controlados pelas flags show_/require_ em LandingPage). Renderizados
+    dinamicamente por leads.forms.build_lead_capture_form; as respostas são
+    salvas em Lead.extra_field_values (JSONField), chaveadas por field_key."""
+
+    TEXT = "text"
+    PHONE = "phone"
+    EMAIL = "email"
+    SELECT = "select"
+    RADIO = "radio"
+    CHECKBOX = "checkbox"
+    TEXTAREA = "textarea"
+    FIELD_TYPE_CHOICES = [
+        (TEXT, "Texto curto"),
+        (PHONE, "Telefone"),
+        (EMAIL, "E-mail"),
+        (SELECT, "Seleção (dropdown)"),
+        (RADIO, "Escolha única (radio)"),
+        (CHECKBOX, "Caixa de marcação"),
+        (TEXTAREA, "Texto longo"),
+    ]
+
+    landing_page = models.ForeignKey(
+        LandingPage, on_delete=models.CASCADE, related_name="form_fields"
+    )
+    field_key = models.SlugField(
+        "Identificador do campo",
+        max_length=60,
+        help_text="Usado como chave nas respostas salvas. Ex: interesse, timeline-decisao.",
+    )
+    label = models.CharField("Rótulo exibido", max_length=150)
+    field_type = models.CharField(
+        "Tipo de campo", max_length=20, choices=FIELD_TYPE_CHOICES, default=TEXT
+    )
+    required = models.BooleanField("Obrigatório", default=False)
+    options_text = models.TextField(
+        "Opções (uma por linha)",
+        blank=True,
+        help_text="Usado apenas para Seleção/Escolha única.",
+    )
+    order = models.PositiveIntegerField("Ordem", default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["landing_page", "field_key"],
+                name="unique_field_key_per_page",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.landing_page.title} — {self.label}"
+
+    def options(self):
+        return [line.strip() for line in self.options_text.splitlines() if line.strip()]
 
 
 class LandingPageAuditLog(models.Model):

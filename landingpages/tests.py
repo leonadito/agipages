@@ -12,7 +12,7 @@ from leads.models import Lead
 from tenants.models import Tenant
 
 from .forms import get_publish_errors
-from .models import LandingPage, LandingPageGalleryImage
+from .models import LandingPage, LandingPageFormField, LandingPageGalleryImage
 
 User = get_user_model()
 
@@ -77,6 +77,62 @@ class PublishValidationTests(TestCase):
         errors = get_publish_errors(page)
         self.assertEqual(errors, [])
 
+    def test_publish_blocked_custom_without_lead_form_token(self):
+        page = LandingPage.objects.create(
+            tenant=self.tenant,
+            title="Custom sem token",
+            design_variant=LandingPage.CUSTOM,
+            custom_html="<html><body>Sem o token aqui</body></html>",
+        )
+        errors = get_publish_errors(page)
+        self.assertTrue(errors)
+
+    def test_publish_blocked_custom_with_empty_html(self):
+        page = LandingPage.objects.create(
+            tenant=self.tenant, title="Custom vazio", design_variant=LandingPage.CUSTOM
+        )
+        errors = get_publish_errors(page)
+        self.assertTrue(errors)
+
+    def test_publish_allowed_custom_with_lead_form_token_and_no_hero_title(self):
+        # Página custom não precisa de hero_title/lead_form_heading/galeria
+        # — essas checagens são puladas inteiramente para essa variante.
+        page = LandingPage.objects.create(
+            tenant=self.tenant,
+            title="Custom completo",
+            design_variant=LandingPage.CUSTOM,
+            custom_html="<html><body>{{LEAD_FORM}}</body></html>",
+        )
+        errors = get_publish_errors(page)
+        self.assertEqual(errors, [])
+
+    def test_publish_blocked_without_contact_method(self):
+        page = LandingPage.objects.create(
+            tenant=self.tenant,
+            title="Sem contato",
+            hero_title="Casas em Tramandaí",
+            lead_form_heading="Receba informações",
+            show_email=False,
+            show_phone=False,
+        )
+        LandingPageGalleryImage.objects.create(landing_page=page, image=make_test_image())
+        errors = get_publish_errors(page)
+        self.assertTrue(errors)
+
+    def test_publish_allowed_with_phone_only_contact(self):
+        page = LandingPage.objects.create(
+            tenant=self.tenant,
+            title="Só telefone",
+            hero_title="Casas em Tramandaí",
+            lead_form_heading="Receba informações",
+            show_email=False,
+            show_phone=True,
+            require_phone=True,
+        )
+        LandingPageGalleryImage.objects.create(landing_page=page, image=make_test_image())
+        errors = get_publish_errors(page)
+        self.assertEqual(errors, [])
+
 
 class LandingPageTenantIsolationTests(TestCase):
     def setUp(self):
@@ -102,6 +158,23 @@ class LandingPageTenantIsolationTests(TestCase):
             reverse("landingpages:publish", kwargs={"pk": self.page_b.pk})
         )
         self.assertEqual(publish_response.status_code, 404)
+
+    def test_user_a_cannot_mutate_user_b_form_fields(self):
+        self.client.force_login(self.user_a)
+        response = self.client.post(
+            reverse("landingpages:edit", kwargs={"pk": self.page_b.pk}),
+            {
+                "form_fields-TOTAL_FORMS": "1",
+                "form_fields-INITIAL_FORMS": "0",
+                "form_fields-0-field_key": "interesse",
+                "form_fields-0-label": "Interesse",
+                "form_fields-0-field_type": LandingPageFormField.TEXT,
+            },
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(
+            LandingPageFormField.objects.filter(landing_page=self.page_b).exists()
+        )
 
     def test_list_view_only_shows_own_tenant_pages(self):
         LandingPage.objects.create(tenant=self.tenant_a, title="Página do A")
@@ -186,3 +259,123 @@ class PublicPageTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Lead.objects.filter(email="bot@example.com").exists())
+
+    def test_dynamic_extra_fields_rendered(self):
+        LandingPageFormField.objects.create(
+            landing_page=self.published_page,
+            field_key="interesse",
+            label="Interesse",
+            field_type=LandingPageFormField.SELECT,
+            options_text="Compra\nAluguel",
+        )
+        response = self.client.get(self._public_url(self.tenant, self.published_page))
+        self.assertContains(response, "Interesse")
+        self.assertContains(response, "<option")
+        self.assertContains(response, "Compra")
+
+    def test_required_custom_field_validation_error(self):
+        LandingPageFormField.objects.create(
+            landing_page=self.published_page,
+            field_key="interesse",
+            label="Interesse",
+            field_type=LandingPageFormField.SELECT,
+            options_text="Compra\nAluguel",
+            required=True,
+        )
+        url = self._public_url(self.tenant, self.published_page)
+        response = self.client.post(
+            url,
+            {
+                "name": "Maria",
+                "email": "maria@example.com",
+                "phone": "51999999999",
+                "city": "Torres",
+                "website": "",
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Lead.objects.filter(email="maria@example.com").exists())
+
+    def test_extra_field_values_persisted_on_lead(self):
+        LandingPageFormField.objects.create(
+            landing_page=self.published_page,
+            field_key="interesse",
+            label="Interesse",
+            field_type=LandingPageFormField.SELECT,
+            options_text="Compra\nAluguel",
+        )
+        url = self._public_url(self.tenant, self.published_page)
+        response = self.client.post(
+            url,
+            {
+                "name": "Maria",
+                "email": "maria@example.com",
+                "phone": "51999999999",
+                "city": "Torres",
+                "website": "",
+                "extra_interesse": "Compra",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        lead = Lead.objects.get(email="maria@example.com")
+        self.assertEqual(lead.extra_field_values, {"interesse": "Compra"})
+
+    def test_email_field_hidden_when_show_email_false(self):
+        self.published_page.show_email = False
+        self.published_page.save()
+        response = self.client.get(self._public_url(self.tenant, self.published_page))
+        self.assertNotContains(response, 'name="email"')
+
+        url = self._public_url(self.tenant, self.published_page)
+        post_response = self.client.post(
+            url,
+            {
+                "name": "Maria",
+                "phone": "51999999999",
+                "city": "Torres",
+                "website": "",
+            },
+        )
+        self.assertEqual(post_response.status_code, 200)
+        lead = Lead.objects.get(name="Maria")
+        self.assertEqual(lead.email, "")
+
+    def test_phone_label_override_rendered(self):
+        self.published_page.phone_label = "WhatsApp"
+        self.published_page.save()
+        response = self.client.get(self._public_url(self.tenant, self.published_page))
+        self.assertContains(response, "WhatsApp")
+
+    def test_custom_variant_renders_custom_html_with_substitutions(self):
+        self.published_page.design_variant = LandingPage.CUSTOM
+        self.published_page.facebook_pixel_id = "123456789"
+        self.published_page.custom_html = (
+            "<html><body><h1>Página do cliente</h1>"
+            "{{TRACKING_SCRIPTS}}{{LEAD_FORM}}</body></html>"
+        )
+        self.published_page.save()
+        response = self.client.get(self._public_url(self.tenant, self.published_page))
+        content = response.content.decode("utf-8")
+        self.assertContains(response, "Página do cliente")
+        self.assertContains(response, 'id="lead-form-wrapper"')
+        self.assertContains(response, "fbq('init', '123456789')")
+        self.assertNotIn("{{LEAD_FORM}}", content)
+        self.assertNotIn("{{TRACKING_SCRIPTS}}", content)
+
+    def test_custom_variant_does_not_execute_django_template_syntax(self):
+        # Regressão anti-SSTI: o conteúdo do tenant precisa voltar verbatim,
+        # provando que a substituição é str.replace() literal e não o motor
+        # de templates do Django (que executaria {% ... %}/resolveria
+        # variáveis de contexto do servidor).
+        self.published_page.design_variant = LandingPage.CUSTOM
+        self.published_page.custom_html = (
+            "<html><body>{{LEAD_FORM}}"
+            "<p>{{ settings.SECRET_KEY }}</p>"
+            "<p>{% for x in 1 %}malicious{% endfor %}</p>"
+            "</body></html>"
+        )
+        self.published_page.save()
+        response = self.client.get(self._public_url(self.tenant, self.published_page))
+        content = response.content.decode("utf-8")
+        self.assertIn("{{ settings.SECRET_KEY }}", content)
+        self.assertIn("{% for x in 1 %}malicious{% endfor %}", content)

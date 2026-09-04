@@ -27,9 +27,19 @@ class Lead(models.Model):
     )
 
     name = models.CharField(max_length=255)
-    email = models.EmailField()
-    phone = models.CharField(max_length=30)
+    # Opcionais no schema porque LandingPage.show_email/show_phone permitem
+    # ao tenant desligar qualquer um dos dois (ex: página só com WhatsApp,
+    # sem e-mail) — a obrigatoriedade real é decidida em tempo de submissão
+    # pelo form dinâmico (leads/forms.py::build_lead_capture_form).
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=30, blank=True)
     city = models.CharField(max_length=100)
+    # Respostas dos campos extras configurados em LandingPageFormField,
+    # chaveadas por field_key. Congelado no momento da submissão: continua
+    # válido mesmo se o campo correspondente for depois editado/apagado.
+    extra_field_values = models.JSONField(
+        "Respostas de campos personalizados", default=dict, blank=True
+    )
 
     utm_source = models.CharField(max_length=255, blank=True)
     utm_medium = models.CharField(max_length=255, blank=True)

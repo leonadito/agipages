@@ -13,21 +13,32 @@
             {{ form.name }}
             {% for error in form.name.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
         </div>
+        {% if landing_page.show_email %}
         <div>
-            <label class="block text-sm font-medium text-gray-700" for="{{ form.email.id_for_label }}">Email *</label>
+            <label class="block text-sm font-medium text-gray-700" for="{{ form.email.id_for_label }}">Email{% if landing_page.require_email %} *{% endif %}</label>
             {{ form.email }}
             {% for error in form.email.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
         </div>
+        {% endif %}
+        {% if landing_page.show_phone %}
         <div>
-            <label class="block text-sm font-medium text-gray-700" for="{{ form.phone.id_for_label }}">Telefone *</label>
+            <label class="block text-sm font-medium text-gray-700" for="{{ form.phone.id_for_label }}">{{ landing_page.phone_label|default:"Telefone" }}{% if landing_page.require_phone %} *{% endif %}</label>
             {{ form.phone }}
             {% for error in form.phone.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
         </div>
+        {% endif %}
         <div>
             <label class="block text-sm font-medium text-gray-700" for="{{ form.city.id_for_label }}">Cidade *</label>
             {{ form.city }}
             {% for error in form.city.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
         </div>
+        {% for field_def, bound_field in extra_fields %}
+        <div>
+            <label class="block text-sm font-medium text-gray-700" for="{{ bound_field.id_for_label }}">{{ field_def.label }}{% if field_def.required %} *{% endif %}</label>
+            {{ bound_field }}
+            {% for error in bound_field.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+        {% endfor %}
 
         <button type="submit"
                 style="background-color: {{ landing_page.lead_form_button_color|default:'#2563eb' }};"
