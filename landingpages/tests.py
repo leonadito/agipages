@@ -396,6 +396,17 @@ class PublicPageTests(TestCase):
         self.assertNotIn("{{LEAD_FORM}}", content)
         self.assertNotIn("{{TRACKING_SCRIPTS}}", content)
 
+    def test_custom_variant_injects_htmx_script_alongside_lead_form(self):
+        # Páginas custom não passam por base.html (que é quem carrega o
+        # HTMX pras variantes standard/premium), então sem isso o hx-post
+        # do formulário injetado fica inerte e o lead nunca é salvo — ver
+        # _render_custom_page.
+        self.published_page.design_variant = LandingPage.CUSTOM
+        self.published_page.custom_html = "<html><body>{{LEAD_FORM}}</body></html>"
+        self.published_page.save()
+        response = self.client.get(self._public_url(self.tenant, self.published_page))
+        self.assertContains(response, "unpkg.com/htmx.org")
+
     def test_custom_variant_does_not_execute_django_template_syntax(self):
         # Regressão anti-SSTI: o conteúdo do tenant precisa voltar verbatim,
         # provando que a substituição é str.replace() literal e não o motor

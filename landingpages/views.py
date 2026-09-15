@@ -258,6 +258,15 @@ def public_page(request, page_slug, tenant_slug=None):
     return render(request, template_name, context)
 
 
+# Mesma versão carregada em templates/base.html. Páginas custom nunca
+# passam por base.html (ver docstring de _render_custom_page abaixo), então
+# sem isto o hx-post/hx-target do formulário injetado fica inerte — o
+# <form> (sem action/method) acaba fazendo um GET comum pra própria URL,
+# recarregando a página sem nunca criar o Lead. Manter em sincronia com a
+# tag de base.html se a versão do HTMX ali for atualizada.
+_HTMX_SCRIPT_TAG = '<script src="https://unpkg.com/htmx.org@1.9.12"></script>'
+
+
 def _render_custom_page(request, landing_page, context):
     """Injeta o formulário de captura e os scripts de tracking no HTML
     fornecido pelo tenant via substituição literal de string — NUNCA passar
@@ -267,6 +276,7 @@ def _render_custom_page(request, landing_page, context):
     Side Template Injection). str.replace() em tokens fixos não executa
     nada, só troca texto."""
     lead_form_html = render_to_string("public/partials/lead_form.html", context, request=request)
+    lead_form_html = _HTMX_SCRIPT_TAG + lead_form_html
     tracking_html = render_to_string(
         "public/partials/tracking_scripts.html", {"landing_page": landing_page}
     )
