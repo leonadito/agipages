@@ -67,6 +67,43 @@ class TraefikDynamicConfigTests(TestCase):
         self.assertEqual(websecure["service"], "web")
         self.assertEqual(websecure["tls"]["certResolver"], "letsencrypt")
 
+    def test_verified_tenant_also_gets_www_redirect_routers(self):
+        Tenant.objects.create(
+            name="Diamond Towers",
+            slug="diamond-towers",
+            custom_domain="diamondtowers.com.br",
+            domain_verified=True,
+        )
+        config = build_traefik_dynamic_config()
+        routers = config["http"]["routers"]
+        middlewares = config["http"]["middlewares"]
+
+        www_websecure = routers["tenant-diamond-towers-www-websecure"]
+        self.assertEqual(www_websecure["rule"], "Host(`www.diamondtowers.com.br`)")
+        self.assertEqual(www_websecure["service"], "web")
+        self.assertEqual(www_websecure["tls"]["certResolver"], "letsencrypt")
+        self.assertEqual(www_websecure["middlewares"], ["tenant-diamond-towers-www-to-apex"])
+        self.assertIn("tenant-diamond-towers-www-web", routers)
+
+        middleware = middlewares["tenant-diamond-towers-www-to-apex"]
+        self.assertTrue(middleware["redirectRegex"]["permanent"])
+        self.assertEqual(
+            middleware["redirectRegex"]["replacement"], "https://diamondtowers.com.br/${1}"
+        )
+
+    def test_domain_already_starting_with_www_gets_no_double_www_router(self):
+        Tenant.objects.create(
+            name="Já com www",
+            slug="ja-com-www",
+            custom_domain="www.jacomwww.com.br",
+            domain_verified=True,
+        )
+        config = build_traefik_dynamic_config()
+        routers = config["http"]["routers"]
+        self.assertIn("tenant-ja-com-www-websecure", routers)
+        self.assertNotIn("tenant-ja-com-www-www-websecure", routers)
+        self.assertEqual(config["http"]["middlewares"], {})
+
     def test_unverified_or_domainless_tenants_get_no_router(self):
         Tenant.objects.create(name="No Domain", slug="no-domain")
         Tenant.objects.create(
