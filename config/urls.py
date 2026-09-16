@@ -21,6 +21,12 @@ urlpatterns = [
     # Path-based fallback for tenants without a verified custom domain:
     # meusaas.com/<tenant_slug>/<page_slug>/
     path("<slug:tenant_slug>/<slug:page_slug>/", public_page, name="public_page"),
+    # A landing page titled exactly "/" gets an empty slug (see
+    # LandingPage.save()) and is meant to act as that tenant's homepage —
+    # this is the closest equivalent to "domain root" available on the
+    # shared fallback domain, since the real root ("") above is already
+    # the platform's own page.
+    path("<slug:tenant_slug>/", public_page, name="public_page_tenant_root"),
 ]
 
 if settings.DEBUG:

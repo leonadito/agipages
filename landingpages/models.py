@@ -25,6 +25,18 @@ class LandingPage(models.Model):
     )
     title = models.CharField("Título da landing page (interno)", max_length=255)
     slug = models.SlugField(max_length=255, blank=True)
+    is_homepage = models.BooleanField(
+        "Página inicial (raiz do domínio)",
+        default=False,
+        help_text=(
+            "Em vez de viver em /pagina/, esta página passa a responder na "
+            "raiz do domínio (ex: seudominio.com/ em vez de "
+            "seudominio.com/pagina/). Só uma página por tenant pode ser a "
+            "inicial. Assim como o slug, só tem efeito enquanto a página "
+            "ainda não foi publicada pela primeira vez — depois disso a URL "
+            "fica travada."
+        ),
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=DRAFT)
     # Qual template público renderiza esta página. "premium" usa um layout
     # visual próprio (não segue o padrão de landing-page-exemplo.png), mas
@@ -271,6 +283,7 @@ class LandingPage(models.Model):
         return slug
 
     def save(self, *args, **kwargs):
+        slug_locked = False
         if self.pk:
             # Slug is locked forever once the page has been published at
             # least once — publicly shared links must never break.
@@ -279,8 +292,20 @@ class LandingPage(models.Model):
             ).first()
             if previous and previous[1] is not None:
                 self.slug = previous[0]
-        if not self.slug:
-            self.slug = self._unique_slug(slugify(self.title) or "landing-page")
+                slug_locked = True
+        if not slug_locked:
+            if self.is_homepage:
+                # An empty slug is what makes the <tenant_slug>/ and
+                # custom-domain root URLs resolve to this page (see
+                # public_page's page_slug="" default). Checked on every
+                # unlocked save (not just "if blank") so toggling the
+                # checkbox on an existing page takes effect. The
+                # (tenant, slug) unique constraint stops a second homepage
+                # per tenant outright; LandingPageFormViewMixin.form_valid
+                # checks for that first to surface a friendly error instead.
+                self.slug = ""
+            elif not self.slug:
+                self.slug = self._unique_slug(slugify(self.title) or "landing-page")
         super().save(*args, **kwargs)
 
     @property

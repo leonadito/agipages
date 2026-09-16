@@ -13,6 +13,11 @@
         {{ form.non_field_errors }}
 
         {% include "landingpages/partials/field.html" with field=form.title %}
+        <div>
+            <label class="flex items-center gap-2 text-sm text-gray-700">{{ form.is_homepage }} {{ form.is_homepage.label }}</label>
+            <p class="mt-1 text-xs text-gray-500">{{ form.is_homepage.help_text }}</p>
+            {% for error in form.is_homepage.errors %}<p class="mt-1 text-sm text-red-600">{{ error }}</p>{% endfor %}
+        </div>
         {% include "landingpages/partials/field.html" with field=form.design_variant %}
 
         {# Campos de contato, campos extras e rastreamento valem para as

@@ -43,6 +43,29 @@ class LandingPageSlugTests(TestCase):
         page2 = LandingPage.objects.create(tenant=other_tenant, title="Lançamento")
         self.assertEqual(page1.slug, page2.slug)
 
+    def test_homepage_checkbox_gets_empty_slug(self):
+        page = LandingPage.objects.create(
+            tenant=self.tenant, title="Página inicial", is_homepage=True
+        )
+        self.assertEqual(page.slug, "")
+
+    def test_unchecking_homepage_before_publish_regenerates_slug(self):
+        page = LandingPage.objects.create(
+            tenant=self.tenant, title="Página inicial", is_homepage=True
+        )
+        page.is_homepage = False
+        page.save()
+        self.assertEqual(page.slug, "pagina-inicial")
+
+    def test_second_homepage_does_not_get_numeric_suffix(self):
+        LandingPage.objects.create(tenant=self.tenant, title="Home A", is_homepage=True)
+        # A second homepage page can't be created cleanly through the model
+        # alone (the (tenant, slug) unique constraint blocks it) — the
+        # dashboard form is what surfaces a friendly error instead of an
+        # IntegrityError, see LandingPageFormViewMixin.form_valid.
+        with self.assertRaises(Exception):
+            LandingPage.objects.create(tenant=self.tenant, title="Home B", is_homepage=True)
+
     def test_slug_locked_after_publish(self):
         page = LandingPage.objects.create(
             tenant=self.tenant, title="Casas em Tramandaí", published_at=None
@@ -427,3 +450,82 @@ class PublicPageTests(TestCase):
         content = response.content.decode("utf-8")
         self.assertIn("{{ settings.SECRET_KEY }}", content)
         self.assertIn("{% for x in 1 %}malicious{% endfor %}", content)
+
+
+class PublicPageRootTests(TestCase):
+    """A landing page with is_homepage=True gets slug="" (see
+    LandingPage.save) and is meant to act as the tenant's homepage:
+    /<tenant_slug>/ on the platform fallback domain, or the bare domain
+    root on a verified custom domain."""
+
+    def setUp(self):
+        cache.clear()
+        self.tenant = Tenant.objects.create(name="Alberto Kappel", slug="albertokappel")
+        self.home_page = LandingPage.objects.create(
+            tenant=self.tenant,
+            title="Página inicial",
+            is_homepage=True,
+            status=LandingPage.PUBLISHED,
+            hero_title="Alto do Parque",
+            lead_form_heading="Receba informações",
+        )
+
+    def test_root_page_reachable_via_tenant_slug_fallback(self):
+        response = self.client.get(f"/{self.tenant.slug}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Alto do Parque")
+
+    def test_root_page_reachable_at_verified_custom_domain_root(self):
+        # Two saves on purpose: Tenant.save() resets domain_verified to
+        # False whenever custom_domain itself changes (see tenants/models.py)
+        # — setting both fields in one save would silently no-op verified.
+        self.tenant.custom_domain = "albertokappel.com.br"
+        self.tenant.save()
+        self.tenant.domain_verified = True
+        self.tenant.save()
+        response = self.client.get("/", HTTP_HOST="albertokappel.com.br")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Alto do Parque")
+
+    def test_non_root_page_not_served_at_tenant_slug_fallback(self):
+        LandingPage.objects.filter(pk=self.home_page.pk).delete()
+        LandingPage.objects.create(
+            tenant=self.tenant,
+            title="Outra página",
+            status=LandingPage.PUBLISHED,
+            hero_title="Outra página",
+            lead_form_heading="Receba informações",
+        )
+        response = self.client.get(f"/{self.tenant.slug}/")
+        self.assertEqual(response.status_code, 404)
+
+
+class LandingPageHomepageFormTests(TestCase):
+    def setUp(self):
+        self.tenant = Tenant.objects.create(name="Alberto Kappel", slug="albertokappel")
+        self.user = User.objects.create_user(
+            username="alberto", password="pass1234", tenant=self.tenant
+        )
+
+    def test_second_homepage_blocked_with_friendly_error(self):
+        LandingPage.objects.create(tenant=self.tenant, title="Home A", is_homepage=True)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("landingpages:create"),
+            {
+                "title": "Home B",
+                "is_homepage": "on",
+                "design_variant": LandingPage.STANDARD,
+                "gallery_images-TOTAL_FORMS": "0",
+                "gallery_images-INITIAL_FORMS": "0",
+                "amenities-TOTAL_FORMS": "0",
+                "amenities-INITIAL_FORMS": "0",
+                "form_fields-TOTAL_FORMS": "0",
+                "form_fields-INITIAL_FORMS": "0",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "raiz do domínio")
+        self.assertEqual(
+            LandingPage.objects.filter(tenant=self.tenant, is_homepage=True).count(), 1
+        )

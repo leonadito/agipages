@@ -10,4 +10,7 @@ from landingpages.views import public_page
 
 urlpatterns = [
     path("<slug:page_slug>/", public_page, name="public_page_domain"),
+    # A landing page titled exactly "/" gets an empty slug (see
+    # LandingPage.save()) and is served at the bare domain root.
+    path("", public_page, name="public_page_domain_root"),
 ]

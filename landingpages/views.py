@@ -88,10 +88,22 @@ class LandingPageFormViewMixin:
         ):
             return self.render_to_response(self.get_context_data(form=form))
 
+        landing_page = form.save(commit=False)
+        landing_page.tenant = self.tenant
+        if landing_page.is_homepage and (
+            LandingPage.objects.filter(tenant=self.tenant, is_homepage=True)
+            .exclude(pk=landing_page.pk)
+            .exists()
+        ):
+            form.add_error(
+                "is_homepage",
+                "Já existe outra landing page marcada como página inicial "
+                "para este tenant — só uma pode ser a raiz do domínio.",
+            )
+            return self.render_to_response(self.get_context_data(form=form))
+
         with transaction.atomic():
             is_new = self.object is None
-            landing_page = form.save(commit=False)
-            landing_page.tenant = self.tenant
             if is_new:
                 landing_page.created_by = self.request.user
             landing_page.updated_by = self.request.user
@@ -189,7 +201,7 @@ def _resolve_public_tenant(request, tenant_slug):
 
 
 @ratelimit(key="ip", rate="5/m", method="POST", block=True)
-def public_page(request, page_slug, tenant_slug=None):
+def public_page(request, page_slug="", tenant_slug=None):
     tenant = _resolve_public_tenant(request, tenant_slug)
     # Drafts are never publicly reachable, on either URL form.
     landing_page = get_object_or_404(
