@@ -59,7 +59,15 @@ AmenityFormSet = inlineformset_factory(
 FormFieldFormSet = inlineformset_factory(
     LandingPage,
     LandingPageFormField,
-    fields=("field_key", "label", "field_type", "required", "options_text", "order"),
+    fields=(
+        "field_key",
+        "label",
+        "field_type",
+        "required",
+        "options_text",
+        "order",
+        "google_form_entry_id",
+    ),
     extra=3,
     can_delete=True,
 )

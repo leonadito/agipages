@@ -143,6 +143,33 @@ class LandingPage(models.Model):
         help_text="O primeiro nome do lead é adicionado automaticamente ao final.",
     )
 
+    # Opcional: além de salvar o Lead normalmente, espelha cada envio para
+    # um Google Forms já existente do tenant (ex: para manter uma planilha
+    # de respostas que ele já usava antes de migrar para esta plataforma).
+    # O ID vem da própria URL de envio do formulário do Google
+    # (".../forms/d/e/<ID>/formResponse"); cada google_form_entry_* mapeia
+    # um campo fixo daqui para o "entry.NNNNNNN" correspondente no Google
+    # Forms (visível inspecionando o HTML do formulário do Google). Campos
+    # extras (LandingPageFormField) têm seu próprio mapeamento individual.
+    google_form_id = models.CharField(
+        "ID do Google Forms para espelhar as respostas (opcional)",
+        max_length=100,
+        blank=True,
+        help_text="O trecho entre /forms/d/e/ e /formResponse na URL de envio do formulário do Google.",
+    )
+    google_form_entry_name = models.CharField(
+        "Campo do Google Forms para o Nome", max_length=50, blank=True
+    )
+    google_form_entry_phone = models.CharField(
+        "Campo do Google Forms para o Telefone", max_length=50, blank=True
+    )
+    google_form_entry_email = models.CharField(
+        "Campo do Google Forms para o E-mail", max_length=50, blank=True
+    )
+    google_form_entry_city = models.CharField(
+        "Campo do Google Forms para a Cidade", max_length=50, blank=True
+    )
+
     # 6. Vídeo institucional
     video_section_title = models.CharField(
         "Título da seção de vídeo", max_length=255, blank=True
@@ -338,6 +365,12 @@ class LandingPageFormField(models.Model):
         help_text="Usado apenas para Seleção/Escolha única.",
     )
     order = models.PositiveIntegerField("Ordem", default=0)
+    google_form_entry_id = models.CharField(
+        "Campo correspondente no Google Forms (entry.NNNNNNN)",
+        max_length=50,
+        blank=True,
+        help_text="Deixe em branco se este campo não deve ser espelhado no Google Forms.",
+    )
 
     class Meta:
         ordering = ["order", "id"]

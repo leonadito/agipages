@@ -44,6 +44,16 @@
             <p class="text-sm text-gray-500">Se preenchido, além de salvar o lead normalmente, o visitante é levado ao WhatsApp logo após enviar o formulário.</p>
             {% include "landingpages/partials/field.html" with field=form.whatsapp_redirect_number %}
             {% include "landingpages/partials/field.html" with field=form.whatsapp_redirect_message %}
+
+            <h3 class="font-medium text-gray-800 pt-2">Espelhar no Google Forms (opcional)</h3>
+            <p class="text-sm text-gray-500">Se preenchido, além de salvar o lead normalmente no dashboard, cada envio também é replicado para um Google Forms já existente. Deixe o ID em branco para desativar. Os campos extras (abaixo) têm seu próprio mapeamento individual.</p>
+            {% include "landingpages/partials/field.html" with field=form.google_form_id %}
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {% include "landingpages/partials/field.html" with field=form.google_form_entry_name %}
+                {% include "landingpages/partials/field.html" with field=form.google_form_entry_phone %}
+                {% include "landingpages/partials/field.html" with field=form.google_form_entry_email %}
+                {% include "landingpages/partials/field.html" with field=form.google_form_entry_city %}
+            </div>
         </div>
 
         <div class="space-y-4 rounded-md border border-gray-200 p-4">

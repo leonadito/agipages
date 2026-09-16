@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "leads",
     "telegram_integration",
     "meta_conversions",
+    "google_forms_integration",
 ]
 
 MIDDLEWARE = [
