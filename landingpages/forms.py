@@ -73,12 +73,13 @@ REQUIRED_FIELDS_TO_PUBLISH = ["hero_title", "lead_form_heading"]
 
 def get_publish_errors(landing_page):
     if landing_page.design_variant == LandingPage.CUSTOM:
-        # Página custom não tem as seções estruturadas nem a galeria —
-        # a única exigência é que o HTML tenha onde o formulário entrar.
+        # Página custom não tem as seções estruturadas nem a galeria. Os
+        # tokens {{LEAD_FORM}}/{{TRACKING_SCRIPTS}} não são obrigatórios:
+        # algumas páginas custom capturam o lead por fora do formulário
+        # da plataforma (ex: botões de WhatsApp direto no HTML), então
+        # exigi-los aqui bloquearia uma publicação legítima.
         if not landing_page.custom_html:
             return ["O campo 'HTML personalizado' está vazio."]
-        if "{{LEAD_FORM}}" not in landing_page.custom_html:
-            return ["O HTML personalizado deve conter o token {{LEAD_FORM}}."]
         return []
 
     errors = []

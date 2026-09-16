@@ -77,7 +77,10 @@ class PublishValidationTests(TestCase):
         errors = get_publish_errors(page)
         self.assertEqual(errors, [])
 
-    def test_publish_blocked_custom_without_lead_form_token(self):
+    def test_publish_allowed_custom_without_lead_form_token(self):
+        # O token {{LEAD_FORM}} não é obrigatório: algumas páginas custom
+        # capturam o lead por fora do formulário da plataforma (ex: botões
+        # de WhatsApp direto no HTML do tenant).
         page = LandingPage.objects.create(
             tenant=self.tenant,
             title="Custom sem token",
@@ -85,7 +88,7 @@ class PublishValidationTests(TestCase):
             custom_html="<html><body>Sem o token aqui</body></html>",
         )
         errors = get_publish_errors(page)
-        self.assertTrue(errors)
+        self.assertEqual(errors, [])
 
     def test_publish_blocked_custom_with_empty_html(self):
         page = LandingPage.objects.create(
