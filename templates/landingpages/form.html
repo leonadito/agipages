@@ -50,6 +50,10 @@
             {% include "landingpages/partials/field.html" with field=form.whatsapp_redirect_number %}
             {% include "landingpages/partials/field.html" with field=form.whatsapp_redirect_message %}
 
+            <h3 class="font-medium text-gray-800 pt-2">Aviso por e-mail (opcional)</h3>
+            <p class="text-sm text-gray-500">Se preenchido, além de salvar o lead normalmente, cada envio é mandado por e-mail com todos os campos. Responder o e-mail responde direto para o lead.</p>
+            {% include "landingpages/partials/field.html" with field=form.lead_notification_emails %}
+
             <h3 class="font-medium text-gray-800 pt-2">Espelhar no Google Forms (opcional)</h3>
             <p class="text-sm text-gray-500">Se preenchido, além de salvar o lead normalmente no dashboard, cada envio também é replicado para um Google Forms já existente. Deixe o ID em branco para desativar. Os campos extras (abaixo) têm seu próprio mapeamento individual.</p>
             {% include "landingpages/partials/field.html" with field=form.google_form_id %}

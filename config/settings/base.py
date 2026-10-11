@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "telegram_integration",
     "meta_conversions",
     "google_forms_integration",
+    "email_notifications",
 ]
 
 MIDDLEWARE = [
@@ -116,3 +117,13 @@ LOGOUT_REDIRECT_URL = "accounts:login"
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
 TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", default="")
 TELEGRAM_WEBHOOK_SECRET = env("TELEGRAM_WEBHOOK_SECRET", default="")
+
+# SMTP for lead notification e-mails (email_notifications/). Empty
+# EMAIL_HOST disables sending; set in .env (Mailcow da VPS em produção).
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="webmaster@localhost")

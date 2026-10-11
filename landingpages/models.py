@@ -1,6 +1,20 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db import models
 from django.utils.text import slugify
+
+
+def split_email_list(value):
+    return [part.strip() for part in (value or "").split(",") if part.strip()]
+
+
+def validate_email_list(value):
+    for address in split_email_list(value):
+        try:
+            validate_email(address)
+        except ValidationError:
+            raise ValidationError(f"'{address}' não é um e-mail válido.")
 
 
 class LandingPage(models.Model):
@@ -153,6 +167,16 @@ class LandingPage(models.Model):
         max_length=500,
         blank=True,
         help_text="O primeiro nome do lead é adicionado automaticamente ao final.",
+    )
+    # Opcional: além de salvar o Lead normalmente, avisa por e-mail a cada
+    # envio (ver email_notifications/) — para quem migrou de um site que
+    # mandava o formulário por e-mail e quer continuar recebendo assim.
+    lead_notification_emails = models.CharField(
+        "E-mails que recebem aviso de novo lead",
+        max_length=500,
+        blank=True,
+        validators=[validate_email_list],
+        help_text="Um ou mais e-mails, separados por vírgula. Deixe em branco para não enviar.",
     )
 
     # Opcional: além de salvar o Lead normalmente, espelha cada envio para
