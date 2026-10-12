@@ -17,6 +17,11 @@ DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
+# Networks of the reverse proxy whose X-Real-Ip header is trusted as the
+# visitor's IP (core.middleware.TrustedProxyClientIPMiddleware). Empty means
+# REMOTE_ADDR is used as-is (dev). prod.py sets the Docker default.
+TRUSTED_PROXY_CIDRS = env.list("TRUSTED_PROXY_CIDRS", default=[])
+
 # Base URL of the platform, used to build absolute links (e.g. Telegram deep links).
 SITE_URL = env("SITE_URL", default="http://127.0.0.1:8000")
 
@@ -41,6 +46,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # Must be first: replaces REMOTE_ADDR with the visitor's real IP (from
+    # the reverse proxy's X-Real-Ip) before anything reads it — ratelimit,
+    # Lead.ip_address, Meta CAPI. See core/middleware.py.
+    "core.middleware.TrustedProxyClientIPMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

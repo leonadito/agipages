@@ -47,3 +47,43 @@
         </button>
     </form>
 </div>
+<script>
+/* O HTMX 1.9 descarta respostas 4xx/5xx: sem isto, um envio recusado não
+   mostra nada ao visitante. 400 = erros de validação (este mesmo parcial
+   com as mensagens) -> troca normalmente. 403 (CSRF ou limite de envios),
+   5xx e falha de rede -> aviso no topo do formulário. O parcial volta a
+   ser renderizado a cada erro, então o registro roda uma vez só. */
+(function () {
+    if (window.__leadFormErrorHandlers) return;
+    window.__leadFormErrorHandlers = true;
+    function notify(text) {
+        var wrapper = document.getElementById('lead-form-wrapper');
+        if (!wrapper) return;
+        var box = wrapper.querySelector('.lead-form-error');
+        if (!box) {
+            box = document.createElement('p');
+            box.className = 'lead-form-error';
+            box.setAttribute('role', 'alert');
+            box.style.cssText = 'color:#fff;background:#b91c1c;padding:10px 12px;border-radius:6px;margin:0 0 12px;font-size:14px';
+            wrapper.insertBefore(box, wrapper.firstChild);
+        }
+        box.textContent = text;
+    }
+    document.addEventListener('htmx:beforeSwap', function (event) {
+        if (event.detail.xhr.status === 400) {
+            event.detail.shouldSwap = true;
+            event.detail.isError = false;
+        }
+    });
+    document.addEventListener('htmx:responseError', function (event) {
+        var status = event.detail.xhr.status;
+        if (status === 400) return;
+        notify(status === 403
+            ? 'Não foi possível enviar. Atualize a página e tente novamente.'
+            : 'Não foi possível enviar agora. Tente novamente em instantes.');
+    });
+    document.addEventListener('htmx:sendError', function () {
+        notify('Sem conexão. Verifique sua internet e tente novamente.');
+    });
+})();
+</script>

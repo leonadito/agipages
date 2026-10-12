@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from landingpages.models import LandingPage
@@ -27,7 +27,7 @@ class LeadCaptureRateLimitTests(TestCase):
             kwargs={"tenant_slug": self.tenant.slug, "page_slug": self.page.slug},
         )
 
-    def _post(self, suffix):
+    def _post(self, suffix, **extra):
         return self.client.post(
             self.url,
             {
@@ -37,6 +37,7 @@ class LeadCaptureRateLimitTests(TestCase):
                 "city": "Torres",
                 "website": "",
             },
+            **extra,
         )
 
     def test_submissions_beyond_the_limit_are_rejected(self):
@@ -49,6 +50,36 @@ class LeadCaptureRateLimitTests(TestCase):
         self.assertEqual(status_codes[:5], [200] * 5)
         self.assertEqual(status_codes[5], 403)
         self.assertEqual(Lead.objects.count(), 5)
+
+    def test_form_ships_handler_that_shows_rejected_submissions(self):
+        # HTMX 1.9 drops 4xx/5xx responses; without the handler in the lead
+        # form partial a rejected submission shows nothing to the visitor.
+        response = self.client.get(self.url)
+        self.assertContains(response, "htmx:beforeSwap")
+        self.assertContains(response, "htmx:responseError")
+
+    def test_invalid_submission_still_returns_400_with_errors(self):
+        response = self.client.post(self.url, {"name": "", "phone": "", "city": "", "website": ""})
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "lead-form-wrapper", status_code=400)
+        self.assertEqual(Lead.objects.count(), 0)
+
+    @override_settings(TRUSTED_PROXY_CIDRS=["172.16.0.0/12"])
+    def test_behind_proxy_the_limit_is_per_visitor_not_global(self):
+        # In production every request reaches Django from the Docker gateway;
+        # the limit must follow the visitor IP sent by Traefik (X-Real-Ip),
+        # or one busy visitor would block everyone else's leads.
+        proxy = {"REMOTE_ADDR": "172.20.0.1"}
+        first_visitor = [
+            self._post(i, HTTP_X_REAL_IP="179.98.148.47", **proxy).status_code for i in range(1, 7)
+        ]
+        self.assertEqual(first_visitor, [200] * 5 + [403])
+
+        other_visitor = self._post(7, HTTP_X_REAL_IP="200.160.2.3", **proxy)
+        self.assertEqual(other_visitor.status_code, 200)
+        self.assertEqual(
+            Lead.objects.get(name="Lead 7").ip_address, "200.160.2.3"
+        )
 
 
 class LeadDashboardTests(TestCase):
