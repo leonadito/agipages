@@ -290,6 +290,10 @@ class PublicPageTests(TestCase):
         content = response.content.decode("utf-8")
         self.assertIn("wa.me/5551999999999", content)
         self.assertIn("Meu%20nome%20%C3%A9%20Maria", content)
+        # Opens in a new tab (falling back to the same tab when the browser
+        # blocks it), plus a visible target=_blank button.
+        self.assertIn("window.open(url, '_blank')", content)
+        self.assertIn('target="_blank" rel="noopener"', content)
 
     def test_no_whatsapp_redirect_script_when_not_configured(self):
         url = self._public_url(self.tenant, self.published_page)
