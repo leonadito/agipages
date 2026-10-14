@@ -51,6 +51,7 @@ class MetaleadsDeliveryTests(TestCase):
         p = build_payload(lead)
         self.assertEqual(p["tenant"], str(self.tenant.core_uuid))
         self.assertEqual((p["source"], p["external_id"]), ("agipages_form", str(lead.uuid)))
+        self.assertEqual(p["occurred_at"], lead.created_at.isoformat())
         self.assertEqual(p["landing_page"], {"id": str(self.page.uuid), "name": "Alto do Parque",
                                              "url": f"https://pages.example/albertokappel/{self.page.slug}/"})
         self.assertEqual(p["form_answers"], {"quartos": "3"})

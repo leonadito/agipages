@@ -59,6 +59,8 @@ def build_payload(lead):
         "tenant": str(lead.tenant.core_uuid),
         "source": "agipages_form",
         "external_id": str(lead.uuid),
+        # Real date of the lead: leads sent late (retries, batches) keep it.
+        "occurred_at": lead.created_at.isoformat(),
         "name": lead.name,
         "email": lead.email,
         "phone": lead.phone,
