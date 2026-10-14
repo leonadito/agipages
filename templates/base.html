@@ -11,6 +11,21 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="min-h-screen bg-gray-50 text-gray-900" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    {% if tenant_choices %}
+    <div class="border-b border-gray-200 bg-white">
+        <form method="post" action="{% url 'accounts:switch_tenant' %}" class="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2 text-sm"
+              x-data @change="$el.submit()">
+            {% csrf_token %}
+            <label for="tenant-switcher" class="text-gray-500">Cliente:</label>
+            <select id="tenant-switcher" name="tenant" class="w-auto rounded-md border border-gray-300 py-1 pl-2 pr-8 text-sm">
+                {% for t in tenant_choices %}
+                <option value="{{ t.pk }}" {% if t.pk == request.user.tenant_id %}selected{% endif %}>{{ t.name }}</option>
+                {% endfor %}
+            </select>
+            <noscript><button type="submit" class="rounded-md bg-gray-100 px-3 py-1">Trocar</button></noscript>
+        </form>
+    </div>
+    {% endif %}
     {% if messages %}
     <div class="mx-auto max-w-3xl mt-4 space-y-2">
         {% for message in messages %}

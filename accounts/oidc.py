@@ -8,11 +8,13 @@ Identity rules:
   on the first SSO login an existing local user with the same e-mail is
   linked instead of creating a duplicate;
 - staff/superuser follow the core's `agitare_staff` claim;
-- the tenant comes from the user's client membership: the local Tenant is
-  linked by `core_uuid`, else by slug, else created from the claim. Users
-  without a client membership (and not Agitare staff) are refused.
-Agency (whitelabel) memberships need the tenant selector, which is not built
-yet: such users are refused for now.
+- the tenants a person may use come from the memberships: a client
+  membership gives that client; an agency membership gives the agency's own
+  tenant and all its active clients (listed in the claim). Each local Tenant
+  is linked by `core_uuid`, else by slug, else created from the claim. The
+  list goes to the session ("tenant_choices") for the tenant selector
+  (accounts/tenant_switch.py); user.tenant is the one currently selected.
+  People with no tenant at all (and not Agitare staff) are refused.
 """
 import logging
 from urllib.parse import urlencode
@@ -27,11 +29,25 @@ from tenants.models import Tenant
 logger = logging.getLogger(__name__)
 
 
-def _client_membership(claims):
+def accessible_clients(claims):
+    """Every core client this person may use here, in claim order, as dicts
+    shaped like a client membership (client_id, client_slug, client_name)."""
+    seen, out = set(), []
     for m in claims.get("memberships") or []:
         if m.get("scope") == "client" and m.get("client_id"):
-            return m
-    return None
+            entries = [m]
+        elif m.get("scope") == "whitelabel":
+            entries = [
+                {"client_id": c["id"], "client_slug": c.get("slug"), "client_name": c.get("name")}
+                for c in m.get("clients") or []
+            ]
+        else:
+            entries = []
+        for e in entries:
+            if e["client_id"] not in seen:
+                seen.add(e["client_id"])
+                out.append(e)
+    return out
 
 
 def tenant_for_membership(membership):
@@ -71,9 +87,9 @@ class CoreOIDCBackend(OIDCAuthenticationBackend):
             # Never take over a local account linked to another core person.
             logger.warning("Login único recusado: %s já pertence a outra pessoa do core", email)
             return False
-        if claims.get("agitare_staff") or _client_membership(claims):
+        if claims.get("agitare_staff") or accessible_clients(claims):
             return True
-        logger.warning("Login único recusado: %s sem vínculo de cliente no core", claims.get("email"))
+        logger.warning("Login único recusado: %s sem nenhum tenant no core", claims.get("email"))
         return False
 
     def filter_users_by_claims(self, claims):
@@ -113,10 +129,12 @@ class CoreOIDCBackend(OIDCAuthenticationBackend):
         staff = bool(claims.get("agitare_staff"))
         user.is_staff = staff
         user.is_superuser = staff
-        membership = _client_membership(claims)
-        if membership:
-            user.tenant = tenant_for_membership(membership)
+        tenants = [tenant_for_membership(entry) for entry in accessible_clients(claims)]
+        if tenants and (user.tenant_id not in {t.pk for t in tenants}):
+            user.tenant = tenants[0]  # keep the current choice when still allowed
         user.save()
+        if getattr(self, "request", None) is not None:
+            self.request.session["tenant_choices"] = [str(t.core_uuid) for t in tenants]
         return user
 
 
