@@ -44,3 +44,7 @@ if settings.OIDC_ENABLED:
     # /oidc/authenticate/ (start) and /oidc/callback/ (return from the core).
     # Inserted at the top: the catch-all public page routes would match first.
     urlpatterns.insert(0, path("oidc/", include("mozilla_django_oidc.urls")))
+    # Single logout: the core POSTs a logout_token here (accounts/backchannel.py).
+    from accounts.backchannel import backchannel_logout
+
+    urlpatterns.insert(0, path("oidc/backchannel-logout/", backchannel_logout, name="oidc_backchannel_logout"))

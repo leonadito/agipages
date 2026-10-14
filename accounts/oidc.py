@@ -103,6 +103,9 @@ class CoreOIDCBackend(OIDCAuthenticationBackend):
 
     @transaction.atomic
     def update_user(self, user, claims):
+        if getattr(self, "request", None) is not None:
+            # Read by accounts.backchannel at login to track this session.
+            self.request.session["oidc_sub"] = claims["sub"]
         user.core_uuid = claims["sub"]
         user.email = claims.get("email") or user.email
         user.first_name = claims.get("given_name") or user.first_name
