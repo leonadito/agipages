@@ -185,3 +185,6 @@ TASKS = {"default": {"BACKEND": "django_tasks_db.DatabaseBackend"}}
 # Delivery of form leads to the CRM (leads/metaleads.py). Empty = off.
 METALEADS_API_URL = env("METALEADS_API_URL", default="")
 METALEADS_API_TOKEN = env("METALEADS_API_TOKEN", default="")
+# Token metaleads uses to read the orphan-check answers (leads/integrity.py).
+# Empty = endpoint closed.
+INTEGRITY_API_TOKEN = env("INTEGRITY_API_TOKEN", default="")

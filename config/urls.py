@@ -6,10 +6,13 @@ from django.views.generic import TemplateView
 from django.views.static import serve
 
 from landingpages.views import public_page
+from leads.integrity import integrity
 from telegram_integration.urls import webhook_urlpatterns
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Read-only answers for metaleads' nightly orphan check.
+    path("api/v1/integrity/", integrity, name="integrity"),
     path("accounts/", include("accounts.urls")),
     # Single sign-on callback and start (only when OIDC_ENABLED, see below).
     path("dashboard/", include("landingpages.urls")),
