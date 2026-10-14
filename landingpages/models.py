@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
@@ -34,6 +36,8 @@ class LandingPage(models.Model):
         (CUSTOM, "HTML personalizado (avançado)"),
     ]
 
+    # Public id other apps store (e.g. the lead's page of origin in metaleads).
+    uuid = models.UUIDField("id público", default=uuid.uuid4, unique=True, editable=False)
     tenant = models.ForeignKey(
         "tenants.Tenant", on_delete=models.CASCADE, related_name="landing_pages"
     )

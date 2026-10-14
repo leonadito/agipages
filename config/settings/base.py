@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "meta_conversions",
     "google_forms_integration",
     "email_notifications",
+    "django_tasks_db",
 ]
 
 MIDDLEWARE = [
@@ -176,3 +177,11 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="webmaster@localhost")
+
+# Task queue in the database (django.tasks + django-tasks-db), worked by
+# `manage.py db_worker`, the container's second process. No Redis.
+TASKS = {"default": {"BACKEND": "django_tasks_db.DatabaseBackend"}}
+
+# Delivery of form leads to the CRM (leads/metaleads.py). Empty = off.
+METALEADS_API_URL = env("METALEADS_API_URL", default="")
+METALEADS_API_TOKEN = env("METALEADS_API_TOKEN", default="")

@@ -12,3 +12,4 @@ PyYAML==6.0.3
 dnspython==2.8.0
 psycopg[binary]==3.3.6
 mozilla-django-oidc==5.0.2
+django-tasks-db==0.13.0

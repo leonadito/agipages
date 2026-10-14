@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -19,6 +21,13 @@ class Lead(models.Model):
     # Denormalized onto Lead (not just via landing_page) so tenant-wide
     # queries never need a join, and so tenant filtering stays a single
     # simple `.filter(tenant=...)` everywhere leads are queried.
+    uuid = models.UUIDField("id público", default=uuid.uuid4, unique=True, editable=False)
+    # Delivery to the CRM (metaleads), done by the task queue after the save
+    # (leads/metaleads.py). The lead stays here too until Phase 8.
+    metaleads_lead_uuid = models.UUIDField("lead no metaleads", null=True, blank=True)
+    metaleads_sent_at = models.DateTimeField(null=True, blank=True)
+    metaleads_attempts = models.PositiveSmallIntegerField(default=0)
+    metaleads_error = models.TextField(blank=True)
     tenant = models.ForeignKey(
         "tenants.Tenant", on_delete=models.CASCADE, related_name="leads"
     )

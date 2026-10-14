@@ -6,8 +6,8 @@
 #     inside this container and never touch production's routers;
 #   - the app serves /media/ itself (SERVE_MEDIA), there is no internal-static
 #     route for the beta;
-#   - one threaded gunicorn worker with --preload to fit the mem_limit
-#     (~70 MB per Django process).
+#   - one threaded gunicorn worker with --preload plus the task worker
+#     (db_worker), to fit the mem_limit (~70 MB per Django process).
 # Own project name: the folder is also called "agipages", and without this the
 # beta would share the production compose project (same image tag, and an "up"
 # could recreate the production container with beta settings).
@@ -16,10 +16,8 @@ name: agipages-beta
 services:
   web:
     build: .
-    command: >
-      gunicorn config.wsgi:application --bind 0.0.0.0:8000 --preload
-      --worker-class gthread --workers 1 --threads 4
-      --max-requests 1000 --max-requests-jitter 100 --access-logfile -
+    # Web + task worker in one container (docker/beta-entrypoint.sh).
+    command: ["bash", "docker/beta-entrypoint.sh"]
     env_file:
       - .env
     environment:
