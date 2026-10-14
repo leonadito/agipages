@@ -1,0 +1,39 @@
+# Beta of the Agitare ecosystem (/var/www/beta/agipages on the VPS, branch
+# beta/ecossistema). Use with: docker compose -f docker-compose.beta.yml ...
+# Differences from the production docker-compose.yml, all deliberate:
+#   - Postgres (DATABASE_URL in .env, database agipages_beta) instead of SQLite;
+#   - NO bind mount of /var/www/traefik/dynamic: tenants.yml regenerations stay
+#     inside this container and never touch production's routers;
+#   - the app serves /media/ itself (SERVE_MEDIA), there is no internal-static
+#     route for the beta;
+#   - one threaded gunicorn worker with --preload to fit the mem_limit
+#     (~70 MB per Django process).
+services:
+  web:
+    build: .
+    command: >
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000 --preload
+      --worker-class gthread --workers 1 --threads 4
+      --max-requests 1000 --max-requests-jitter 100 --access-logfile -
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      SERVE_MEDIA: "True"
+      MALLOC_ARENA_MAX: "2"
+    volumes:
+      - media_beta:/app/media
+    ports:
+      - "127.0.0.1:8011:8000"
+    networks:
+      - default
+      - shared-db
+    mem_limit: 220m
+    restart: unless-stopped
+
+volumes:
+  media_beta:
+
+networks:
+  shared-db:
+    external: true

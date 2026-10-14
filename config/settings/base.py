@@ -85,12 +85,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": env("DATABASE_PATH", default=str(BASE_DIR / "db.sqlite3")),
+# Postgres when DATABASE_URL is set (beta: shared server, database
+# agipages_beta); otherwise the SQLite file production still uses.
+if env("DATABASE_URL", default=""):
+    DATABASES = {"default": env.db("DATABASE_URL")}
+    DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": env("DATABASE_PATH", default=str(BASE_DIR / "db.sqlite3")),
+        }
     }
-}
 
 AUTH_USER_MODEL = "accounts.User"
 
@@ -115,6 +121,10 @@ STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+# Production serves /media/ from the host nginx (internal-static). The beta
+# has no such route, so the app serves it itself until media moves to object
+# storage (Cloudflare R2) before Phase 8.
+SERVE_MEDIA = env.bool("SERVE_MEDIA", default=False)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
