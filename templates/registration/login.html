@@ -8,6 +8,17 @@
 {% block content %}
 <div class="mx-auto max-w-sm px-4 py-16" x-data="{ showPassword: false }">
     <h1 class="text-2xl font-semibold mb-6">Entrar</h1>
+    {% if request.GET.saiu %}
+    <p class="mb-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">Você saiu da sua conta.</p>
+    {% elif request.GET.falhou %}
+    <p class="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">Não foi possível entrar com esta conta. Fale com a Agitare se você deveria ter acesso.</p>
+    {% endif %}
+    {% if oidc_enabled %}
+    <a href="{% url 'oidc_authentication_init' %}"
+       class="mb-4 block w-full rounded-md bg-blue-600 px-4 py-2 text-center font-medium text-white hover:bg-blue-500">Entrar com a conta Agitare</a>
+    {% if not request.GET.local %}<p class="text-center text-sm"><a class="text-gray-500 hover:underline" href="?local=1">Entrar com senha local</a></p>{% endif %}
+    {% endif %}
+    {% if not oidc_enabled or request.GET.local %}
     <form method="post" class="space-y-4">
         {% csrf_token %}
         {% for field in form %}
@@ -43,5 +54,6 @@
         {% endif %}
         <button type="submit" class="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-500">Entrar</button>
     </form>
+    {% endif %}
 </div>
 {% endblock %}

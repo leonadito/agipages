@@ -45,6 +45,9 @@ class User(AbstractUser):
     migration-history compatibility (see its docstring)."""
 
     email = models.EmailField("endereço de e-mail", unique=True)
+    # Public id of this person in the Agitare Core (OIDC "sub"); set on the
+    # first single-sign-on login. Empty for local-only accounts.
+    core_uuid = models.UUIDField("id no core", null=True, blank=True, unique=True, editable=False)
     tenant = models.ForeignKey(
         "tenants.Tenant",
         on_delete=models.CASCADE,

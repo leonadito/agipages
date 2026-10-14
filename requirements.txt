@@ -11,3 +11,4 @@ gunicorn==26.0.0
 PyYAML==6.0.3
 dnspython==2.8.0
 psycopg[binary]==3.3.6
+mozilla-django-oidc==5.0.2

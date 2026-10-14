@@ -132,6 +132,34 @@ LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "landingpages:list"
 LOGOUT_REDIRECT_URL = "accounts:login"
 
+# Single sign-on with the Agitare Core (accounts/oidc.py). Off unless the
+# client id is set, so production keeps its local login until the cutover.
+# With it on, /accounts/login/ goes to the core and local sign-up is closed;
+# the Django admin keeps its own password login for emergencies.
+OIDC_RP_CLIENT_ID = env("OIDC_RP_CLIENT_ID", default="")
+OIDC_ENABLED = bool(OIDC_RP_CLIENT_ID)
+if OIDC_ENABLED:
+    INSTALLED_APPS.append("mozilla_django_oidc")
+    AUTHENTICATION_BACKENDS = [
+        "accounts.oidc.CoreOIDCBackend",
+        "django.contrib.auth.backends.ModelBackend",
+    ]
+    OIDC_RP_CLIENT_SECRET = env("OIDC_RP_CLIENT_SECRET")
+    _OP = env("OIDC_OP_BASE_URL").rstrip("/")  # e.g. https://id.beta.agitare.com.br/o
+    OIDC_OP_AUTHORIZATION_ENDPOINT = f"{_OP}/authorize/"
+    OIDC_OP_TOKEN_ENDPOINT = f"{_OP}/token/"
+    OIDC_OP_USER_ENDPOINT = f"{_OP}/userinfo/"
+    OIDC_OP_JWKS_ENDPOINT = f"{_OP}/.well-known/jwks.json"
+    OIDC_OP_LOGOUT_ENDPOINT = f"{_OP}/logout/"
+    OIDC_RP_SIGN_ALGO = "RS256"
+    OIDC_RP_SCOPES = "openid email profile tenancy"
+    OIDC_USE_PKCE = True
+    OIDC_STORE_ID_TOKEN = True
+    OIDC_OP_LOGOUT_URL_METHOD = "accounts.oidc.provider_logout"
+    OIDC_POST_LOGOUT_REDIRECT_URI = f"{SITE_URL.rstrip('/')}/accounts/login/?saiu=1"
+    LOGIN_URL = "oidc_authentication_init"
+    LOGIN_REDIRECT_URL_FAILURE = "/accounts/login/?falhou=1"
+
 # Telegram bot integration (Milestone 6). Empty by default; set in .env.
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
 TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", default="")

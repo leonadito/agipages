@@ -11,6 +11,7 @@ from telegram_integration.urls import webhook_urlpatterns
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("accounts.urls")),
+    # Single sign-on callback and start (only when OIDC_ENABLED, see below).
     path("dashboard/", include("landingpages.urls")),
     path("dashboard/leads/", include("leads.urls")),
     path("dashboard/telegram/", include("telegram_integration.urls")),
@@ -38,3 +39,8 @@ elif settings.SERVE_MEDIA:
     urlpatterns.insert(
         0, re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT})
     )
+
+if settings.OIDC_ENABLED:
+    # /oidc/authenticate/ (start) and /oidc/callback/ (return from the core).
+    # Inserted at the top: the catch-all public page routes would match first.
+    urlpatterns.insert(0, path("oidc/", include("mozilla_django_oidc.urls")))

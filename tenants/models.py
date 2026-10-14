@@ -6,6 +6,9 @@ from django.db import models
 class Tenant(models.Model):
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=100, unique=True)
+    # Public id of this tenant (client) in the Agitare Core; linked on the
+    # first single-sign-on login of one of its users (by slug).
+    core_uuid = models.UUIDField("id no core", null=True, blank=True, unique=True, editable=False)
     custom_domain = models.CharField(
         "Domínio próprio",
         max_length=255,
