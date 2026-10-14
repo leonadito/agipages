@@ -8,6 +8,11 @@
 #     route for the beta;
 #   - one threaded gunicorn worker with --preload to fit the mem_limit
 #     (~70 MB per Django process).
+# Own project name: the folder is also called "agipages", and without this the
+# beta would share the production compose project (same image tag, and an "up"
+# could recreate the production container with beta settings).
+name: agipages-beta
+
 services:
   web:
     build: .
