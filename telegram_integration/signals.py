@@ -7,6 +7,8 @@ from .services import notify_new_lead
 
 
 @receiver(post_save, sender=Lead)
-def notify_lead_created(sender, instance, created, **kwargs):
-    if created:
+def notify_lead_created(sender, instance, created, raw=False, **kwargs):
+    # raw = loaddata (copying data between databases): the lead already
+    # existed, so nothing must be sent again.
+    if created and not raw:
         notify_new_lead(instance)

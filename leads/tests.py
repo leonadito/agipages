@@ -213,3 +213,58 @@ class LeadDashboardTests(TestCase):
         self.assertEqual(status_response.status_code, 404)
         self.lead_b.refresh_from_db()
         self.assertEqual(self.lead_b.status, Lead.NEW)
+
+
+class LeadSignalsSkipLoaddataTests(TestCase):
+    """Copying data between databases (dumpdata/loaddata, as in the move to
+    Postgres) must not re-send e-mail, Telegram, Meta CAPI or Google Forms
+    for leads that already existed."""
+
+    SERVICES = [
+        "email_notifications.signals.send_lead_notification_email",
+        "google_forms_integration.signals.send_lead_to_google_form",
+        "meta_conversions.signals.send_lead_conversion_event",
+        "telegram_integration.signals.notify_new_lead",
+    ]
+
+    def setUp(self):
+        self.tenant = Tenant.objects.create(name="T", slug="t")
+        self.page = LandingPage.objects.create(tenant=self.tenant, title="P")
+
+    def _patched(self):
+        from contextlib import ExitStack
+        from unittest import mock
+
+        stack = ExitStack()
+        mocks = [stack.enter_context(mock.patch(path)) for path in self.SERVICES]
+        return stack, mocks
+
+    def test_normal_creation_notifies_and_loaddata_does_not(self):
+        import os
+        import tempfile
+
+        from django.core import serializers
+        from django.core.management import call_command
+
+        stack, mocks = self._patched()
+        with stack:
+            lead = Lead.objects.create(
+                tenant=self.tenant, landing_page=self.page, name="Ana", phone="1", city="Torres"
+            )
+            self.assertTrue(all(m.call_count == 1 for m in mocks))
+            data = serializers.serialize("json", [lead])
+            Lead.objects.all().delete()
+            for m in mocks:
+                m.reset_mock()
+
+            fd, path = tempfile.mkstemp(suffix=".json")
+            with os.fdopen(fd, "w") as f:
+                f.write(data)
+            try:
+                call_command("loaddata", path, verbosity=0)
+            finally:
+                os.remove(path)
+
+            self.assertEqual(Lead.objects.count(), 1)
+            for m in mocks:
+                m.assert_not_called()
