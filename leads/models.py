@@ -28,6 +28,9 @@ class Lead(models.Model):
     metaleads_sent_at = models.DateTimeField(null=True, blank=True)
     metaleads_attempts = models.PositiveSmallIntegerField(default=0)
     metaleads_error = models.TextField(blank=True)
+    # The visitor's answer to "aceito ser contatado por WhatsApp e e-mail"
+    # (null = lead from before the field existed).
+    consent_contact = models.BooleanField("aceitou ser contatado", null=True, blank=True)
     tenant = models.ForeignKey(
         "tenants.Tenant", on_delete=models.CASCADE, related_name="leads"
     )

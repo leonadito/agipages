@@ -9,6 +9,9 @@ class LeadCaptureForm(forms.Form):
     instância, então um Meta.fields fixo não serve mais)."""
 
     name = forms.CharField(label="Nome", max_length=255)
+    # Consent to be contacted (Meta rules for company-started WhatsApp, LGPD).
+    # Decision of 2026-10-15: comes checked; whoever does not accept unchecks.
+    consent = forms.BooleanField(label="Aceito ser contatado por WhatsApp e e-mail sobre este assunto.", required=False, initial=True)
 
     # Honeypot: a real visitor never sees or fills this field (hidden via
     # CSS in the template); bots that auto-fill every input do. Any value

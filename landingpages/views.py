@@ -221,6 +221,7 @@ def public_page(request, page_slug="", tenant_slug=None):
                 phone=form.cleaned_data.get("phone", ""),
                 city=form.cleaned_data["city"],
                 extra_field_values=extract_extra_field_values(landing_page, form.cleaned_data),
+                consent_contact=bool(form.cleaned_data.get("consent")),
             )
             for key in UTM_PARAMS:
                 setattr(lead, key, request.POST.get(key, ""))

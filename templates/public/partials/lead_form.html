@@ -40,6 +40,11 @@
         </div>
         {% endfor %}
 
+        <div class="flex items-start gap-2">
+            {{ form.consent }}
+            <label class="text-sm text-gray-700" for="{{ form.consent.id_for_label }}">Aceito ser contatado por WhatsApp e e-mail sobre este assunto.</label>
+        </div>
+
         <button type="submit"
                 style="background-color: {{ landing_page.lead_form_button_color|default:'#2563eb' }};"
                 class="w-full rounded-md px-4 py-2 font-medium text-white">

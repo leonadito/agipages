@@ -66,6 +66,8 @@ def build_payload(lead):
         "phone": lead.phone,
         "city": lead.city,
         "form_answers": lead.extra_field_values or {},
+        **({"consent": {"email": lead.consent_contact, "whatsapp": lead.consent_contact,
+                        "source": f"agipages: {page.title}"[:200]}} if lead.consent_contact is not None else {}),
         "landing_page": {"id": str(page.uuid), "name": page.title, "url": page_url(page)},
         "attribution": {
             "platform": _platform(lead),

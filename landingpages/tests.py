@@ -271,6 +271,18 @@ class PublicPageTests(TestCase):
         self.assertEqual(lead.tenant, self.tenant)
         self.assertEqual(lead.landing_page, self.published_page)
 
+    def test_consent_checkbox_comes_checked_and_is_saved(self):
+        url = self._public_url(self.tenant, self.published_page)
+        page = self.client.get(url)
+        self.assertContains(page, "Aceito ser contatado por WhatsApp e e-mail")
+        self.assertContains(page, 'name="consent"')
+        self.assertRegex(page.content.decode(), r'<input[^>]*name="consent"[^>]*checked')
+        base = {"name": "Ana", "phone": "51999999999", "city": "Torres", "website": ""}
+        self.client.post(url, {**base, "email": "aceita@example.com", "consent": "on"})
+        self.client.post(url, {**base, "email": "recusa@example.com"})  # unchecked: not sent by the browser
+        self.assertTrue(Lead.objects.get(email="aceita@example.com").consent_contact)
+        self.assertFalse(Lead.objects.get(email="recusa@example.com").consent_contact)
+
     def test_whatsapp_redirect_url_rendered_on_success_when_configured(self):
         self.published_page.whatsapp_redirect_number = "5551999999999"
         self.published_page.whatsapp_redirect_message = "Oi! Quero saber mais."
