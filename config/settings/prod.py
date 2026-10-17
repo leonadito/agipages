@@ -2,8 +2,6 @@ from .base import *  # noqa: F401,F403
 
 DEBUG = False
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Traefik (network_mode: host) reaches the container through the published

@@ -117,16 +117,36 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# Manifest+compression only in prod.py — requires collectstatic to have run,
-# which isn't true during local dev.
-STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
-
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 # Production serves /media/ from the host nginx (internal-static). The beta
-# has no such route, so the app serves it itself until media moves to object
-# storage (Cloudflare R2) before Phase 8.
+# has no such route, so the app serves it itself (SERVE_MEDIA).
 SERVE_MEDIA = env.bool("SERVE_MEDIA", default=False)
+# Every file of the apps lives in Cloudflare R2 (decision of 2026-10-16): with
+# R2_BUCKET set, uploads go to the private bucket (folder R2_PREFIX) and the
+# app delivers them on /media/ itself (core.media), since agitare.com.br is
+# not on Cloudflare yet. Without it (tests, local), on disk.
+R2_BUCKET = env("R2_BUCKET", default="")
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    # Django 6 no longer reads STATICFILES_STORAGE: this is the storage in use.
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+if R2_BUCKET:
+    STORAGES["default"] = {
+        "BACKEND": "core.media.R2MediaStorage",
+        "OPTIONS": {
+            "bucket_name": R2_BUCKET,
+            "endpoint_url": env("R2_ENDPOINT"),
+            "access_key": env("R2_ACCESS_KEY_ID"),
+            "secret_key": env("R2_SECRET_ACCESS_KEY"),
+            "region_name": "auto",
+            "signature_version": "s3v4",
+            "location": env("R2_PREFIX", default="agipages"),
+            "default_acl": None,
+            "file_overwrite": False,
+        },
+    }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

@@ -5,6 +5,7 @@ from django.urls import include, path, re_path
 from django.views.generic import TemplateView
 from django.views.static import serve
 
+from core.media import media_file
 from landingpages.views import public_page
 from leads.integrity import integrity
 from telegram_integration.urls import webhook_urlpatterns
@@ -34,7 +35,11 @@ urlpatterns = [
     path("<slug:tenant_slug>/", public_page, name="public_page_tenant_root"),
 ]
 
-if settings.DEBUG:
+if settings.R2_BUCKET:
+    # Images in Cloudflare R2, delivered by the app (core.media). Ahead of the
+    # catch-all public page routes.
+    urlpatterns.insert(0, re_path(r"^media/(?P<path>.+)$", media_file, name="media_file"))
+elif settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 elif settings.SERVE_MEDIA:
     # static() is a no-op without DEBUG, so wire the view directly, ahead of
